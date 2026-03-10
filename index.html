@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Requirement & GTM Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    
+    <style>
+        /* Print layout handling */
+        @media print {
+            @page { margin: 1cm; size: A4; }
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print, nav, #inputSection, button { display: none !important; }
+            
+            body.print-report #reportSection { display: block !important; box-shadow: none; border: none; margin: 0; padding: 0; }
+            body.print-report #pdfProposalView { display: none !important; }
+            
+            body.print-proposal #reportSection { display: none !important; }
+            body.print-proposal #pdfProposalView { display: block !important; }
+
+            #printCover { display: flex !important; flex-direction: column; justify-content: center; height: 100vh; page-break-after: always; }
+            section { page-break-inside: avoid; margin-bottom: 2cm; }
+            .page-break { page-break-before: always; }
+            table, tr, td, th { page-break-inside: avoid; }
+            h1 { font-size: 24pt !important; color: #0f172a !important; }
+            h2 { font-size: 18pt !important; color: #4338CA !important; }
+            p, li, td { font-size: 10pt !important; }
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #4338CA;
+            width: 20px; height: 20px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .vision-box { border: 2px dashed #cbd5e1; transition: all 0.3s; }
+        .vision-box:hover { border-color: #4338CA; background-color: #eef2ff; }
+        .hidden-scope { display: none !important; }
+        
+        .prd-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; margin-bottom: 1rem; }
+        .prd-table th { background-color: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; padding: 10px; border: 1px solid #e2e8f0; font-size: 0.75rem; text-align: left; }
+        .prd-table td { border: 1px solid #e2e8f0; padding: 10px; vertical-align: top; }
+        
+        .tshirt-S { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
+        .tshirt-M { background: #fef9c3; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
+        .tshirt-L { background: #ffedd5; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
+        .tshirt-XL { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
+
+        #diagramWrapper { position: relative; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; overflow-x: auto; }
+        #diagramWrapper svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+        
+        .diagram-toolbar { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
+        .diagram-btn { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px; font-size: 0.7rem; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s; }
+        .diagram-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        #rawDiagramCode { display: none; background: #0f172a; color: #e2e8f0; font-family: monospace; font-size: 0.7rem; padding: 16px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; margin-top: 12px; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-20 print-report">
+
+    <nav class="bg-indigo-900 text-white p-4 shadow-lg sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Product & GTM Architect
+            </h1>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <input type="password" id="apiKey" onchange="saveApiKey()" placeholder="Paste Gemini API Key Here" class="text-black text-sm p-2 rounded w-full md:w-64 border-2 border-indigo-500 focus:border-indigo-400 outline-none">
+                <button onclick="scanModels()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded border border-indigo-400 font-bold whitespace-nowrap shadow-sm">
+                    1. Scan Models
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-[95%] xl:max-w-7xl mx-auto p-4 md:p-6">
+
+        <div id="inputSection" class="bg-white rounded-xl shadow-md p-6 border border-gray-200 no-print">
+            
+            <div class="mb-6 bg-slate-50 p-4 rounded border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="w-full">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">2. Select AI Model</label>
+                    <select id="modelSelector" class="w-full p-2 border rounded border-slate-300 text-sm bg-white text-gray-500" disabled>
+                        <option>Waiting for Scan...</option>
+                    </select>
+                    <p id="modelCount" class="text-xs text-slate-500 mt-1 italic"></p>
+                </div>
+            </div>
+
+            <!-- Vision Section (Wireframes) -->
+            <div class="mb-8 p-6 rounded-xl vision-box bg-slate-50 text-center">
+                <h3 class="text-lg font-bold text-slate-700 mb-1 flex justify-center items-center gap-2">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Have a Sketch, Wireframe, or Screenshot?
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Upload a whiteboard sketch or competitor screenshot. The AI will extract the core user journey and UI elements.</p>
+                <div id="imagePreviewBox" class="hidden mb-4 flex justify-center">
+                    <div class="relative inline-block">
+                        <img id="imagePreview" src="" alt="Wireframe preview" class="max-h-48 max-w-full rounded border border-indigo-200 shadow">
+                        <button onclick="clearDiagramImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs font-bold leading-5">×</button>
+                    </div>
+                </div>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <input type="file" id="diagramInput" accept="image/*" onchange="previewImage(this)" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+                    <button onclick="scanWireframe()" id="visionBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-6 rounded shadow transition-all">
+                        🔍 Analyze Visual Context
+                    </button>
+                </div>
+                <div id="visionResult" class="mt-4 text-xs text-left hidden p-3 bg-indigo-50 border border-indigo-100 rounded text-indigo-800"></div>
+            </div>
+
+            <!-- Product Requirements Input -->
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-900">3. Product Definition</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Feature / Product Name:</label>
+                    <input type="text" id="productName" placeholder="e.g., AI Log Summarization" class="w-full text-sm border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Target Personas:</label>
+                    <input type="text" id="targetPersonas" placeholder="e.g., SOC Analyst, Security Admin" class="w-full text-sm border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Release Scope:</label>
+                    <select id="releaseScope" class="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white">
+                        <option value="MVP / Beta">MVP / Beta</option>
+                        <option value="V1 General Availability">V1 General Availability</option>
+                        <option value="Fast-Follow Enhancement">Fast-Follow Enhancement</option>
+                        <option value="Enterprise Tier Add-on">Enterprise Tier Add-on</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="flex flex-col h-full">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Strategic Context & Constraints:</label>
+                    <textarea id="strategicContext" placeholder="What are we building and why? Mention any specific technical constraints, out-of-scope items, or key business drivers." class="w-full flex-grow text-sm border border-gray-300 rounded px-3 py-2 min-h-[120px] resize-none"></textarea>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg flex flex-col justify-center">
+                    <h4 class="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Raw Customer Feedback (CSV)
+                    </h4>
+                    <p class="text-xs text-blue-700 mb-3">Upload an export of Zendesk tickets, SFDC notes, or user interviews. The AI will synthesize these into actionable user stories.</p>
+                    <input type="file" id="feedbackCsv" accept=".csv" class="block w-full text-xs text-blue-700 file:mr-4 file:py-1.5 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer bg-white border border-blue-200 p-1 rounded">
+                </div>
+            </div>
+
+            <button onclick="generatePRD()" id="generateBtn" class="w-full bg-indigo-900 hover:bg-indigo-800 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed border-b-4 border-indigo-600">
+                4. Generate PRD & Flowchart
+            </button>
+
+            <!-- STEP 5: GTM DECK -->
+            <div id="step5Section" class="mt-8 p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200">
+                <div class="mb-4 pb-2 border-b border-indigo-200">
+                    <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        5. Internal GTM Alignment Deck
+                    </h3>
+                    <p class="text-xs text-indigo-700 mt-1">Generate the presentation to pitch this feature to Engineering, Sales, and Exec leadership.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-3">
+                        <div><label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide">PM Name (Author)</label><input type="text" id="deckAuthor" placeholder="e.g. Jane Doe, Group PM" class="w-full text-xs border border-indigo-300 rounded px-2 py-1.5 bg-white"></div>
+                        <div class="flex gap-4 pt-1">
+                            <div class="flex-1">
+                                <label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide">Primary Brand Color</label>
+                                <div class="flex items-center gap-2 border border-indigo-300 rounded bg-white px-2 py-1">
+                                    <input type="color" id="themePrimary" value="#312E81" class="h-6 w-8 p-0 border-0 cursor-pointer bg-transparent">
+                                    <span class="text-[10px] text-gray-500 font-mono" id="themePrimaryLabel">#312E81</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide">Accent Color</label>
+                                <div class="flex items-center gap-2 border border-indigo-300 rounded bg-white px-2 py-1">
+                                    <input type="color" id="themeAccent" value="#4F46E5" class="h-6 w-8 p-0 border-0 cursor-pointer bg-transparent">
+                                    <span class="text-[10px] text-gray-500 font-mono" id="themeAccentLabel">#4F46E5</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide flex justify-between">Company Logo <span>(Opt)</span></label>
+                            <input type="file" accept="image/*" onchange="handleLogoUpload(this)" class="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer bg-white border border-indigo-300 rounded p-0.5">
+                        </div>
+                        <div class="bg-white p-2 border border-indigo-200 rounded">
+                            <label class="block text-[10px] font-bold text-indigo-900 mb-1.5 uppercase tracking-wide">Deck Contents</label>
+                            <div class="flex flex-wrap gap-x-3 gap-y-2 text-[10px] font-medium text-slate-700">
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideWhy" checked class="accent-indigo-600"> The Why (Market)</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideWhat" checked class="accent-indigo-600"> The What (Solution)</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlidePersonas" checked class="accent-indigo-600"> Personas</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlidePricing" checked class="accent-indigo-600"> Pricing/Packaging</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideSales" checked class="accent-indigo-600"> Sales Enablement</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideRoadmap" checked class="accent-indigo-600"> Roadmap</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-indigo-200 flex flex-wrap items-center gap-3">
+                    <button onclick="generateGTMDeck()" id="deckBtn" class="bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg shadow border-b-4 border-indigo-900 flex items-center gap-2 whitespace-nowrap transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        Generate Pitch Deck (PPTX & PDF)
+                    </button>
+                    
+                    <button onclick="printProposalPDF()" id="printPdfBtn" class="hidden bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg shadow border-b-4 border-slate-600 flex items-center gap-2 whitespace-nowrap transition-all text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        Print Formal PDF
+                    </button>
+                    
+                    <div id="deckStatus" class="hidden text-xs text-indigo-700 flex items-center gap-2 font-medium">
+                        <span class="loader" style="width:14px;height:14px;border-width:2px;display:inline-block;border-top-color:#4338CA"></span>
+                        <span id="deckStatusText">Preparing...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRD REPORT SECTION -->
+        <div id="reportSection" class="hidden bg-white mt-8 shadow-xl rounded-xl border border-gray-200 overflow-hidden">
+            <div id="printCover" class="hidden p-12 bg-white text-center">
+                <div class="mb-10 text-indigo-600">
+                    <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h1 class="text-5xl font-bold text-slate-900 mb-4">Product Requirements Document (PRD)</h1>
+                <h2 class="text-2xl text-indigo-600 mb-12">Feature: <span id="coverFeature">TBD</span></h2>
+                <div class="text-slate-500 mt-auto"><p class="mb-2">Generated by Product Architect</p><p class="coverDate text-sm"></p></div>
+            </div>
+
+            <div class="bg-slate-900 text-white p-8 flex justify-between items-start no-print-cover">
+                <div>
+                    <h1 class="text-3xl font-bold" id="outFeatureName">Product Requirements Document</h1>
+                    <p class="text-slate-400 mt-1">Scope: <span id="outScope" class="text-indigo-400 font-bold"></span></p>
+                </div>
+                <div class="no-print">
+                    <button onclick="printTechnicalReport()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded flex items-center gap-2 shadow"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> Print PRD (PDF)</button>
+                </div>
+            </div>
+
+            <div class="p-8 space-y-8">
+                <!-- Exec Summary & Problem -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <section>
+                        <h3 class="text-lg font-bold text-slate-900 border-b pb-2 mb-3">Executive Summary</h3>
+                        <div id="outExecSummary" class="text-gray-700 leading-relaxed text-sm prose max-w-none"></div>
+                    </section>
+                    <section>
+                        <h3 class="text-lg font-bold text-slate-900 border-b pb-2 mb-3">Problem Statement</h3>
+                        <div id="outProblem" class="text-gray-700 leading-relaxed text-sm prose max-w-none"></div>
+                    </section>
+                </div>
+
+                <!-- Scope details -->
+                <section class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex flex-col md:flex-row gap-6">
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-indigo-900 mb-2 uppercase tracking-wide">Target Personas</h4>
+                        <div id="outPersonas" class="text-sm text-indigo-800"></div>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-indigo-900 mb-2 uppercase tracking-wide">Out of Scope (Anti-Goals)</h4>
+                        <div id="outOfScope" class="text-sm text-indigo-800"></div>
+                    </div>
+                </section>
+
+                <!-- Mermaid Diagram -->
+                <section class="break-inside-avoid">
+                    <div class="flex items-center justify-between mb-3 border-b pb-2">
+                        <h3 class="text-lg font-bold text-slate-900">User Flow / Architecture Diagram</h3>
+                        <div class="flex gap-2 no-print">
+                            <button class="diagram-btn" onclick="zoomDiagram(1.2)">＋ Zoom In</button>
+                            <button class="diagram-btn" onclick="zoomDiagram(0.8)">－ Zoom Out</button>
+                            <button class="diagram-btn" onclick="resetZoom()">↺ Reset</button>
+                            <button class="diagram-btn" onclick="toggleRawCode()">{ } Code</button>
+                        </div>
+                    </div>
+                    <div id="diagramWrapper"><div id="mermaidContainer" class="flex justify-center overflow-x-auto min-h-[200px]"></div></div>
+                    <pre id="rawDiagramCode"></pre>
+                </section>
+                
+                <!-- User Stories -->
+                <section class="break-inside-avoid">
+                    <h3 class="text-lg font-bold text-slate-900 border-b pb-2 mb-3">Agile User Stories</h3>
+                    <table class="prd-table bg-white">
+                        <thead>
+                            <tr>
+                                <th style="width:15%">Persona</th>
+                                <th style="width:30%">I want to...</th>
+                                <th style="width:25%">So that...</th>
+                                <th style="width:25%">Acceptance Criteria</th>
+                                <th style="width:5%; text-align:center">Effort</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outStoriesBody"></tbody>
+                    </table>
+                </section>
+            </div>
+        </div>
+
+        <!-- PDF GTM DECK VIEW -->
+        <div id="pdfProposalView" class="hidden bg-white max-w-4xl mx-auto p-12 mt-8 text-slate-800 font-sans shadow-xl rounded border border-gray-200 mb-20">
+            <!-- Cover Page -->
+            <div id="pdfCoverBanner" class="text-center pb-12 mb-12 border-b-4 flex flex-col items-center justify-center min-h-[60vh]">
+                <img id="pdfCoverLogo" src="" class="h-24 object-contain mb-8" style="display:none;" alt="Company Logo">
+                <h1 class="text-5xl font-extrabold text-slate-900 mb-6 tracking-tight" id="pdfDeckTitle">GTM Alignment Deck</h1>
+                <p class="text-2xl font-medium mb-12" id="pdfCompanySubtitle" style="color: #312E81;">Feature: <span id="pdfFeatureLabel" class="font-bold"></span></p>
+                
+                <div class="mt-auto pt-12 text-sm text-gray-500 w-full flex justify-between border-t border-gray-200">
+                    <div class="text-left">
+                        <p class="font-bold text-gray-700">Prepared by:</p>
+                        <p id="pdfAuthorLabel"></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-gray-700">Date:</p>
+                        <p class="pdfDateLabel"></p>
+                    </div>
+                </div>
+            </div>
+            <!-- Dynamic Content Container -->
+            <div id="pdfContentContainer" class="space-y-12"></div>
+        </div>
+
+    </main>
+
+    <script>
+        // ── LOAD SAVED API KEY ON INIT ──
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('pmApiKey');
+            if (savedKey) document.getElementById('apiKey').value = savedKey;
+        });
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKey').value.trim();
+            if (key) localStorage.setItem('pmApiKey', key);
+        }
+
+        // UI Binding
+        document.getElementById('themePrimary').addEventListener('input', function() { document.getElementById('themePrimaryLabel').innerText = this.value.toUpperCase(); });
+        document.getElementById('themeAccent').addEventListener('input', function() { document.getElementById('themeAccentLabel').innerText = this.value.toUpperCase(); });
+
+        document.querySelectorAll('.coverDate, .pdfDateLabel').forEach(el => {
+            el.innerText = new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+        });
+
+        let companyLogoBase64 = null; 
+        let globalVisionContext = ""; 
+        let currentDiagramCode = "";
+        let diagramZoom = 1;
+        let cachedGtmData = null;
+
+        function handleLogoUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    companyLogoBase64 = e.target.result; 
+                    const pdfLogo = document.getElementById('pdfCoverLogo');
+                    pdfLogo.src = companyLogoBase64;
+                    pdfLogo.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else { companyLogoBase64 = null; document.getElementById('pdfCoverLogo').style.display = 'none'; }
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreviewBox').classList.remove('hidden');
+                    document.getElementById('imagePreviewBox').classList.add('flex');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function clearDiagramImage() {
+            document.getElementById('diagramInput').value = '';
+            document.getElementById('imagePreviewBox').classList.add('hidden');
+            document.getElementById('imagePreviewBox').classList.remove('flex');
+            globalVisionContext = "";
+            document.getElementById('visionResult').classList.add('hidden');
+        }
+
+        // Diagram Controls
+        function zoomDiagram(factor) { diagramZoom *= factor; diagramZoom = Math.min(Math.max(diagramZoom, 0.3), 4); const svg = document.querySelector('#mermaidContainer svg'); if (svg) svg.style.transform = `scale(${diagramZoom})`; }
+        function resetZoom() { diagramZoom = 1; const svg = document.querySelector('#mermaidContainer svg'); if (svg) svg.style.transform = 'scale(1)'; }
+        function toggleRawCode() { const box = document.getElementById('rawDiagramCode'); box.style.display = box.style.display === 'block' ? 'none' : 'block'; }
+
+        const fileToBase64 = (file, maxPx = 1024) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = (e) => {
+                const img = new Image(); img.onerror = reject;
+                img.onload = () => {
+                    let { width, height } = img;
+                    if (width <= maxPx && height <= maxPx) { resolve(e.target.result.split(',')[1]); return; }
+                    const scale = maxPx / Math.max(width, height);
+                    width = Math.round(width * scale); height = Math.round(height * scale);
+                    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85).split(',')[1]);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Smart Rate Limiting Engine
+        async function fetchWithRetry(url, options, retries = 4, backoff = 10000, statusCb = null) {
+            for (let i = 0; i < retries; i++) {
+                let response;
+                try { response = await fetch(url, options); } 
+                catch (netErr) { if (i < retries - 1) { await new Promise(r => setTimeout(r, 2000)); continue; } throw new Error('Network error: ' + netErr.message); }
+                
+                if (response.ok) { try { return await response.json(); } catch (pe) { throw new Error('Could not parse JSON: ' + pe.message); } }
+
+                let body; try { body = await response.json(); } catch (_) { body = null; }
+                const msg = body?.error?.message || body?.error?.status || ('HTTP ' + response.status);
+
+                if ((response.status === 429 || response.status === 503) && i < retries - 1) {
+                    let waitMs = backoff;
+                    const retryMatch = msg.match(/retry in (\d+(\.\d+)?)s/i);
+                    if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1500; 
+
+                    if (statusCb) {
+                        let t = Math.ceil(waitMs / 1000); statusCb(`Rate limit paused. Auto-resuming in ${t}s…`);
+                        const tick = setInterval(() => { t--; if (t > 0 && statusCb) statusCb(`Rate limit paused. Auto-resuming in ${t}s…`); }, 1000);
+                        await new Promise(r => setTimeout(r, waitMs)); clearInterval(tick);
+                    } else { await new Promise(r => setTimeout(r, waitMs)); }
+                    backoff = Math.min(backoff * 1.5, 30000); continue;
+                }
+                throw new Error(`[HTTP ${response.status}] ` + msg); 
+            }
+            throw new Error('Request failed after retries.');
+        }
+
+        async function scanModels() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const select = document.getElementById('modelSelector');
+            if (!apiKey) { alert("Please paste API Key first!"); return; }
+            select.innerHTML = "<option>Scanning...</option>"; select.disabled = true;
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                const data = await response.json();
+                let validModels = (data.models || []).filter(m => m.supportedGenerationMethods?.includes("generateContent"));
+                const recommended = ['gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-2.5-pro'];
+                const modelSet = new Set(validModels.map(m => m.name.replace('models/', '')));
+                recommended.forEach(rec => modelSet.add(rec));
+                select.innerHTML = ""; let preferred = null;
+                Array.from(modelSet).forEach(name => {
+                    const opt = document.createElement('option'); opt.value = name; opt.text = name; select.appendChild(opt);
+                    if (name.includes('gemini-2.5-flash')) preferred = name;
+                    else if (!preferred && name.includes('gemini-2.0-flash')) preferred = name;
+                });
+                if (preferred) select.value = preferred;
+                select.disabled = false;
+                document.getElementById('modelCount').innerText = `${modelSet.size} models available. Auto-selected: ${preferred}`;
+            } catch (e) { alert("Network Error: " + e.message); select.innerHTML = "<option>Scan Failed</option>"; }
+        }
+
+        function extractJSON(raw) {
+            let cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+            const start = cleaned.indexOf('{'); const end = cleaned.lastIndexOf('}');
+            if (start === -1 || end === -1 || end <= start) throw new Error('No JSON object found.');
+            cleaned = cleaned.substring(start, end + 1);
+            try { return JSON.parse(cleaned); } catch (_) {}
+            try { return JSON.parse(cleaned.replace(/,\s*([}\]])/g, '$1')); } catch (_) {}
+            try { return JSON.parse(cleaned.replace(/([^\\])\\n/g, '$1\\\\n')); } catch (_) {}
+            throw new Error('Could not parse AI response as JSON.');
+        }
+
+        // Vision Scanner
+        async function scanWireframe() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelSelector').value;
+            const fileInput = document.getElementById('diagramInput');
+            const btn = document.getElementById('visionBtn');
+            const resEl = document.getElementById('visionResult');
+
+            if (!apiKey) return alert("Please enter API Key first!");
+            if (modelName.includes("Wait")) return alert("Click 'Scan Models' first!");
+            if (fileInput.files.length === 0) return alert("Please select an image file first.");
+
+            btn.disabled = true; btn.innerHTML = '<span class="loader mx-auto" style="width:16px;height:16px;border-width:2px;display:inline-block"></span>';
+            resEl.classList.remove('hidden'); resEl.innerText = "Analyzing visual context...";
+
+            try {
+                const base64Image = await fileToBase64(fileInput.files[0]);
+                const mimeType = fileInput.files[0].type;
+                const prompt = `Analyze this UI wireframe, whiteboard sketch, or app screenshot. Output ONLY valid JSON: {"summary": "Brief description of what this UI does", "elements": ["List of core UI elements/buttons"], "userFlow": "Step by step flow inferred from the image"}`;
+                
+                const apiResult = await fetchWithRetry(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType, data: base64Image } }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 2000 } }) },
+                    3, 10000, (msg) => { resEl.innerText = msg; }
+                );
+
+                if (!apiResult.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error(`AI returned no content.`);
+                const data = extractJSON(apiResult.candidates[0].content.parts[0].text);
+                
+                globalVisionContext = `Wireframe Summary: ${data.summary}. Elements: ${data.elements.join(', ')}. Flow: ${data.userFlow}.`;
+                resEl.innerHTML = `✅ <strong>Vision Extracted:</strong> ${data.summary}<br><span class="text-gray-500">Stored as context for PRD generation.</span>`;
+            } catch (e) {
+                resEl.innerHTML = `❌ <strong>Error:</strong> ${e.message}`; globalVisionContext = "";
+            } finally { btn.disabled = false; btn.innerHTML = '🔍 Analyze Visual Context'; }
+        }
+
+        // Generate PRD
+        async function generatePRD() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelSelector').value;
+            const btn = document.getElementById('generateBtn');
+
+            if (!apiKey) return alert("Please enter API Key.");
+            if (modelName.includes("Wait")) return alert("Click 'Scan Models' first!");
+
+            const prodName = document.getElementById('productName').value || "New Feature";
+            const personas = document.getElementById('targetPersonas').value || "End Users";
+            const scope = document.getElementById('releaseScope').value;
+            const context = document.getElementById('strategicContext').value;
+            
+            // Read CSV if exists
+            let csvText = "";
+            const csvInput = document.getElementById('feedbackCsv');
+            if (csvInput.files.length > 0) {
+                const text = await csvInput.files[0].text();
+                // Take first ~30 rows to prevent massive token overflow
+                csvText = text.split('\n').slice(0, 30).join('\n'); 
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span class="loader" style="display:inline-block"></span> Synthesizing PRD...</span>';
+
+            const prompt = `You are a Senior Group Product Manager. Create a PRD for feature: "${prodName}". Target Personas: ${personas}. Release Scope: ${scope}.
+Strategic Context: ${context || 'None provided.'}
+Visual Context (if any): ${globalVisionContext || 'None provided.'}
+Raw Feedback/Tickets: \n${csvText || 'None provided.'}\n
+
+INSTRUCTIONS:
+Generate a structured JSON output representing the PRD and a Mermaid Flowchart.
+For the Mermaid Flowchart, output a SINGLE LINE string using "\\n" for line breaks. Do NOT use markdown backticks in the mermaid string. Use a standard 'flowchart TD' or 'sequenceDiagram'.
+
+OUTPUT FORMAT (ONLY JSON):
+{
+  "execSummary": "2-3 paragraphs explaining what we are building and why (Single String).",
+  "problemStatement": "1-2 paragraphs detailing the user pain points (Single String).",
+  "outOfScope": "Markdown bullet points of what is NOT in this release (Single String).",
+  "stories": [
+    {"role": "e.g. SOC Analyst", "action": "e.g. click the summarize button", "value": "e.g. save time reading logs", "ac": ["AC 1", "AC 2"], "effort": "S, M, L, or XL"}
+  ],
+  "mermaidFlowchart": "flowchart TD\\n  A[User] -->|Clicks| B(UI)\\n  B --> C{Backend}"
+}`;
+
+            try {
+                const result = await fetchWithRetry(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+                    { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: {temperature: 0.3, maxOutputTokens: 8192} }) },
+                    4, 15000, (msg) => { btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px"><span class="loader"></span> ${msg}</span>`; }
+                );
+
+                const prd = extractJSON(result.candidates[0].content.parts[0].text);
+                cachedGtmData = prd; // Save for the deck generation
+
+                // Render
+                document.getElementById('reportSection').classList.remove('hidden');
+                document.getElementById('outFeatureName').innerText = prodName;
+                document.getElementById('coverFeature').innerText = prodName;
+                document.getElementById('outScope').innerText = scope;
+                
+                // Defensive markdown parser to handle AI sometimes returning arrays instead of strings
+                const safeMd = (val) => {
+                    if (!val) return '';
+                    if (Array.isArray(val)) return marked.parse(val.map(v => String(v).startsWith('-') ? v : '- ' + v).join('\n'));
+                    return marked.parse(String(val));
+                };
+
+                document.getElementById('outExecSummary').innerHTML = safeMd(prd.execSummary);
+                document.getElementById('outProblem').innerHTML = safeMd(prd.problemStatement);
+                document.getElementById('outPersonas').innerHTML = personas;
+                document.getElementById('outOfScope').innerHTML = safeMd(prd.outOfScope);
+
+                // Stories
+                const tbody = document.getElementById('outStoriesBody');
+                tbody.innerHTML = '';
+                prd.stories.forEach(s => {
+                    let acHtml = "<ul class='list-disc pl-4 text-xs space-y-1'>";
+                    s.ac.forEach(a => acHtml += `<li>${a}</li>`); acHtml += "</ul>";
+                    const row = `<tr>
+                        <td class="font-bold text-slate-800">${s.role}</td>
+                        <td class="text-slate-700">${s.action}</td>
+                        <td class="text-slate-700 italic">${s.value}</td>
+                        <td>${acHtml}</td>
+                        <td class="text-center"><span class="tshirt-${s.effort}">${s.effort}</span></td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+
+                // Mermaid
+                const mc = document.getElementById('mermaidContainer');
+                mc.innerHTML = '';
+                if (prd.mermaidFlowchart) {
+                    currentDiagramCode = prd.mermaidFlowchart;
+                    document.getElementById('rawDiagramCode').textContent = prd.mermaidFlowchart;
+                    try {
+                        mermaid.initialize({ startOnLoad: false, theme: 'base' });
+                        const { svg } = await mermaid.render('mermaid_' + Date.now(), prd.mermaidFlowchart);
+                        mc.innerHTML = svg;
+                    } catch (me) {
+                        mc.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded text-xs">Diagram Error: ${me.message}</div>`;
+                    }
+                }
+
+                document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (e) {
+                alert("Generation Error: " + e.message); console.error(e);
+            } finally { btn.disabled = false; btn.innerHTML = "4. Generate PRD & Flowchart"; }
+        }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // GTM DECK GENERATOR
+        // ══════════════════════════════════════════════════════════════
+        
+        function pptxSetStatus(msg) {
+            const el = document.getElementById('deckStatus'); const l = el.querySelector('.loader');
+            el.classList.remove('hidden'); el.style.color = ''; if(l) l.style.display = 'inline-block';
+            document.getElementById('deckStatusText').innerText = msg;
+        }
+
+        function pptxHeader(pres, slide, title, sub, PP) {
+            slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 1.1, fill: { color: PP.dark } });
+            slide.addText(title, { x: 0.4, y: 0.08, w: 9.2, h: 0.55, fontSize: 24, bold: true, color: PP.white, fontFace: 'Calibri', margin: 0 });
+            if (sub) slide.addText(sub, { x: 0.4, y: 0.65, w: 9.2, h: 0.35, fontSize: 11, color: PP.slateC, fontFace: 'Calibri', margin: 0 });
+            slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.06, h: 1.1, fill: { color: PP.accent } });
+        }
+
+        function pptxFooter(pres, slide, feature, page, total, PP) {
+            slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.3, w: 10, h: 0.32, fill: { color: PP.slateD } });
+            slide.addText(`${feature} - Internal GTM Alignment`, { x: 0.3, y: 5.33, w: 6, h: 0.24, fontSize: 8, color: PP.muted, fontFace: 'Calibri', margin: 0 });
+            slide.addText(`${page} / ${total}`, { x: 9.0, y: 5.33, w: 0.7, h: 0.24, fontSize: 8, color: PP.muted, fontFace: 'Calibri', align: 'right', margin: 0 });
+        }
+
+        function printTechnicalReport() {
+            document.body.classList.add('print-report'); document.body.classList.remove('print-proposal'); window.print();
+        }
+        function printProposalPDF() {
+            document.body.classList.add('print-proposal'); document.body.classList.remove('print-report'); window.print();
+        }
+
+        async function generateGTMDeck() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelSelector').value;
+            const btn = document.getElementById('deckBtn');
+            if (!apiKey || !cachedGtmData) return alert('Please generate the PRD (Step 4) first!');
+
+            const prodName = document.getElementById('productName').value || "New Feature";
+            const author = document.getElementById('deckAuthor').value || "Product Team";
+            const pHex = document.getElementById('themePrimary').value.replace('#','').toUpperCase();
+            const aHex = document.getElementById('themeAccent').value.replace('#','').toUpperCase();
+
+            const PP = { dark: '0F172A', primary: pHex, accent: aHex, light: 'F8FAFC', white: 'FFFFFF', muted: '64748B', slate2: '1E293B', slateC: '94A3B8', slateD: 'E2E8F0', green: '16A34A' };
+
+            btn.disabled = true; document.getElementById('printPdfBtn').classList.add('hidden');
+            pptxSetStatus('Step 1/3 — Structuring GTM narrative...');
+
+            const prompt = `You are a Group Product Manager. Create an internal GTM Alignment Deck for "${prodName}".
+Based on this PRD context: ${JSON.stringify(cachedGtmData).substring(0, 3000)}
+
+Output ONLY valid JSON:
+{
+  "theWhy": {"title": "The Market Problem", "points": ["..."]},
+  "theWhat": {"title": "The Solution", "points": ["..."]},
+  "personas": [ {"name": "...", "pain": "...", "win": "..."} ], // exactly 3
+  "pricing": {"strategy": "e.g. Included in Base vs Paid Add-on", "rationale": "..."},
+  "sales": {"valueProp": "1 sentence elevator pitch", "objections": [ {"obj": "...", "rebuttal": "..."} ]}, // 3 objections
+  "roadmap": [{"phase": "Beta", "date": "Q3", "goal": "..."}, {"phase": "GA", "date": "Q4", "goal": "..."}]
+}`;
+
+            try {
+                const res = await fetchWithRetry(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+                    { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: {temperature: 0.4} }) },
+                    3, 10000, (msg) => pptxSetStatus(msg)
+                );
+                
+                const deckData = extractJSON(res.candidates[0].content.parts[0].text);
+                pptxSetStatus('Step 2/3 — Rendering slides...');
+
+                const pres = new PptxGenJS(); pres.layout = 'LAYOUT_16x9'; pres.author = author;
+                const TODAY = new Date().toLocaleDateString('en-GB');
+                
+                // Selections
+                const cWhy = document.getElementById('chkSlideWhy').checked;
+                const cWhat = document.getElementById('chkSlideWhat').checked;
+                const cPer = document.getElementById('chkSlidePersonas').checked;
+                const cPri = document.getElementById('chkSlidePricing').checked;
+                const cSal = document.getElementById('chkSlideSales').checked;
+                const cRod = document.getElementById('chkSlideRoadmap').checked;
+
+                let totalSlides = 1 + [cWhy, cWhat, cPer, cPri, cSal, cRod].filter(Boolean).length;
+                let cur = 1;
+
+                // 1. TITLE
+                const s1 = pres.addSlide(); s1.background = { color: PP.dark };
+                s1.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 3.8, h: 5.625, fill: { color: PP.primary } });
+                if (companyLogoBase64) s1.addImage({ data: companyLogoBase64, x: 0.4, y: 0.5, w: 2.5, h: 1.0, sizing: { type: 'contain' } });
+                s1.addText(prodName, { x: 4.1, y: 1.5, w: 5.6, h: 1.0, fontSize: 42, bold: true, color: PP.accent, fontFace: 'Calibri', margin: 0 });
+                s1.addText('GTM Alignment & Strategy', { x: 4.1, y: 2.5, w: 5.6, h: 0.5, fontSize: 24, color: PP.white, fontFace: 'Calibri', margin: 0 });
+                s1.addText(`Prepared by: ${author}`, { x: 4.1, y: 3.5, w: 5.6, h: 0.3, fontSize: 12, color: PP.slateC, fontFace: 'Calibri', margin: 0 });
+                s1.addText(`Date: ${TODAY}`, { x: 4.1, y: 3.8, w: 5.6, h: 0.3, fontSize: 12, color: PP.slateC, fontFace: 'Calibri', margin: 0 });
+
+                // 2. THE WHY
+                if (cWhy) {
+                    const s = pres.addSlide(); s.background = { color: PP.light };
+                    pptxHeader(pres, s, 'The Why', deckData.theWhy.title, PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
+                    deckData.theWhy.points.forEach((pt, i) => {
+                        s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.5 + (i*0.8), w: 0.1, h: 0.5, fill: {color: PP.accent} });
+                        s.addText(pt, { x: 0.8, y: 1.5 + (i*0.8), w: 8.5, h: 0.5, fontSize: 14, color: PP.slate2, fontFace: 'Calibri' });
+                    });
+                }
+
+                // 3. THE WHAT
+                if (cWhat) {
+                    const s = pres.addSlide(); s.background = { color: PP.light };
+                    pptxHeader(pres, s, 'The Solution', deckData.theWhat.title, PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
+                    deckData.theWhat.points.forEach((pt, i) => {
+                        s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.5 + (i*0.8), w: 0.1, h: 0.5, fill: {color: PP.primary} });
+                        s.addText(pt, { x: 0.8, y: 1.5 + (i*0.8), w: 8.5, h: 0.5, fontSize: 14, color: PP.slate2, fontFace: 'Calibri' });
+                    });
+                }
+
+                // 4. PERSONAS
+                if (cPer) {
+                    const s = pres.addSlide(); s.background = { color: PP.light };
+                    pptxHeader(pres, s, 'Target Personas', 'Who are we building this for?', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
+                    deckData.personas.slice(0,3).forEach((p, i) => {
+                        const cx = 0.5 + (i*3.1);
+                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.5, w: 2.8, h: 3.0, fill: {color: PP.white}, line: {color: PP.slateD} });
+                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.5, w: 2.8, h: 0.4, fill: {color: PP.primary} });
+                        s.addText(p.name, { x: cx, y: 1.55, w: 2.8, h: 0.3, fontSize: 14, bold: true, color: PP.white, align: 'center' });
+                        s.addText('Pain:', { x: cx+0.2, y: 2.1, w: 2.4, h: 0.2, fontSize: 10, bold: true, color: PP.accent });
+                        s.addText(p.pain, { x: cx+0.2, y: 2.3, w: 2.4, h: 0.8, fontSize: 11, color: PP.slate2, valign: 'top' });
+                        s.addText('Win:', { x: cx+0.2, y: 3.2, w: 2.4, h: 0.2, fontSize: 10, bold: true, color: PP.green });
+                        s.addText(p.win, { x: cx+0.2, y: 3.4, w: 2.4, h: 0.8, fontSize: 11, color: PP.slate2, valign: 'top' });
+                    });
+                }
+
+                // 5. PRICING
+                if (cPri) {
+                    const s = pres.addSlide(); s.background = { color: PP.light };
+                    pptxHeader(pres, s, 'Pricing & Packaging Strategy', 'Commercial impact of this release', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
+                    s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.5, w: 9, h: 1.0, fill: {color: PP.primary} });
+                    s.addText('STRATEGY', { x: 0.7, y: 1.6, w: 8.6, h: 0.3, fontSize: 10, color: PP.slateC, bold: true });
+                    s.addText(deckData.pricing.strategy, { x: 0.7, y: 1.9, w: 8.6, h: 0.5, fontSize: 20, color: PP.white, bold: true });
+                    s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 2.8, w: 9, h: 1.5, fill: {color: PP.white}, line: {color: PP.slateD} });
+                    s.addText('RATIONALE', { x: 0.7, y: 3.0, w: 8.6, h: 0.3, fontSize: 10, color: PP.muted, bold: true });
+                    s.addText(deckData.pricing.rationale, { x: 0.7, y: 3.3, w: 8.6, h: 0.8, fontSize: 14, color: PP.slate2, valign: 'top' });
+                }
+
+                // 6. SALES
+                if (cSal) {
+                    const s = pres.addSlide(); s.background = { color: PP.light };
+                    pptxHeader(pres, s, 'Sales Enablement', 'Pitch & Objection Handling', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
+                    s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.3, w: 9, h: 0.8, fill: {color: PP.accent, transparency: 80} });
+                    s.addText(`Elevator Pitch: ${deckData.sales.valueProp}`, { x: 0.7, y: 1.45, w: 8.6, h: 0.5, fontSize: 14, bold: true, color: PP.dark, italic: true });
+                    deckData.sales.objections.slice(0,3).forEach((obj, i) => {
+                        const y = 2.4 + (i*0.9);
+                        s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: y, w: 0.4, h: 0.7, fill: {color: PP.primary} });
+                        s.addText('Q', { x: 0.5, y: y, w: 0.4, h: 0.35, fontSize: 12, color: PP.white, bold: true, align: 'center' });
+                        s.addText('A', { x: 0.5, y: y+0.35, w: 0.4, h: 0.35, fontSize: 12, color: PP.accent, bold: true, align: 'center', fill: {color: PP.dark} });
+                        s.addText(obj.obj, { x: 1.0, y: y, w: 8.5, h: 0.35, fontSize: 11, bold: true, color: PP.slate2 });
+                        s.addText(obj.rebuttal, { x: 1.0, y: y+0.35, w: 8.5, h: 0.35, fontSize: 11, color: PP.muted });
+                    });
+                }
+
+                // 7. ROADMAP
+                if (cRod) {
+                    const s = pres.addSlide(); s.background = { color: PP.light };
+                    pptxHeader(pres, s, 'Implementation Roadmap', 'Delivery phases', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
+                    deckData.roadmap.slice(0,3).forEach((rm, i) => {
+                        const cx = 0.5 + (i*3.1);
+                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.8, w: 2.8, h: 2.5, fill: {color: PP.white}, line: {color: PP.slateD} });
+                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.8, w: 2.8, h: 0.5, fill: {color: PP.dark} });
+                        s.addText(rm.phase, { x: cx, y: 1.9, w: 2.8, h: 0.3, fontSize: 14, bold: true, color: PP.white, align: 'center' });
+                        s.addText(rm.date, { x: cx, y: 2.5, w: 2.8, h: 0.4, fontSize: 20, bold: true, color: PP.accent, align: 'center' });
+                        s.addText(rm.goal, { x: cx+0.2, y: 3.1, w: 2.4, h: 1.0, fontSize: 12, color: PP.slate2, align: 'center', valign: 'top' });
+                    });
+                }
+
+                pptxSetStatus('Step 3/3 — Saving files...');
+                
+                // ── HTML PDF RENDER ──
+                document.getElementById('pdfFeatureLabel').innerText = prodName;
+                document.getElementById('pdfAuthorLabel').innerText = author;
+                document.getElementById('pdfCoverBanner').style.borderColor = `#${pHex}`;
+                document.getElementById('pdfCompanySubtitle').style.color = `#${pHex}`;
+
+                const pdfContainer = document.getElementById('pdfContentContainer');
+                pdfContainer.innerHTML = '';
+                const addSec = (title, html) => {
+                    pdfContainer.innerHTML += `<div class="page-break-inside-avoid mb-10"><h3 class="text-2xl font-bold text-slate-800 border-b-2 pb-2 mb-4 flex items-center gap-3" style="border-color: #${pHex}40;"><span class="w-3 h-8 inline-block rounded" style="background-color: #${pHex}"></span> ${title}</h3><div class="text-gray-700 leading-relaxed">${html}</div></div>`;
+                };
+
+                if(cWhy) {
+                    let h = `<ul class="list-disc pl-6 space-y-2">`; deckData.theWhy.points.forEach(p=> h+=`<li>${p}</li>`); h+=`</ul>`;
+                    addSec('The Market Problem', h);
+                }
+                if(cWhat) {
+                    let h = `<ul class="list-disc pl-6 space-y-2">`; deckData.theWhat.points.forEach(p=> h+=`<li>${p}</li>`); h+=`</ul>`;
+                    addSec('The Proposed Solution', h);
+                }
+                if(cPer) {
+                    let h = `<div class="grid grid-cols-2 gap-4">`;
+                    deckData.personas.forEach(p=> h+=`<div class="border p-4 rounded bg-slate-50 border-slate-200"><h4 class="font-bold text-lg mb-2" style="color:#${pHex}">${p.name}</h4><p class="text-sm mb-2"><strong>Pain:</strong> ${p.pain}</p><p class="text-sm"><strong>Win:</strong> ${p.win}</p></div>`);
+                    h+=`</div>`; addSec('Target Personas', h);
+                }
+                if(cPri) {
+                    addSec('Pricing & Packaging', `<div class="p-4 rounded border" style="background:#${pHex}10; border-color:#${pHex}40"><h4 class="font-bold text-xl mb-2" style="color:#${pHex}">${deckData.pricing.strategy}</h4><p>${deckData.pricing.rationale}</p></div>`);
+                }
+                if(cSal) {
+                    let h = `<p class="italic font-bold text-lg mb-4" style="color:#${aHex}">"${deckData.sales.valueProp}"</p><div class="space-y-4">`;
+                    deckData.sales.objections.forEach(o=> h+=`<div class="border-l-4 pl-4 py-1" style="border-color:#${pHex}"><p class="font-bold text-sm text-slate-800">Q: ${o.obj}</p><p class="text-sm text-gray-600">A: ${o.rebuttal}</p></div>`);
+                    h+=`</div>`; addSec('Sales Enablement & Objections', h);
+                }
+                if(cRod) {
+                    let h = `<div class="flex gap-4">`;
+                    deckData.roadmap.forEach(r=> h+=`<div class="flex-1 border p-4 rounded bg-slate-50"><h4 class="font-bold text-lg" style="color:#${pHex}">${r.phase}</h4><p class="text-xs font-bold text-gray-400 mb-2">${r.date}</p><p class="text-sm">${r.goal}</p></div>`);
+                    h+=`</div>`; addSec('Implementation Roadmap', h);
+                }
+
+                await pres.writeFile({ fileName: `GTM_Deck_${prodName.replace(/\s+/g,'_')}.pptx` });
+                
+                const el = document.getElementById('deckStatus'); const l = el.querySelector('.loader');
+                if(l) l.style.display = 'none';
+                el.classList.remove('hidden'); el.style.color = '#16a34a';
+                document.getElementById('deckStatusText').innerHTML = `✅ PPTX Downloaded!`;
+                document.getElementById('printPdfBtn').classList.remove('hidden');
+
+            } catch (e) {
+                const el = document.getElementById('deckStatus'); const l = el.querySelector('.loader');
+                if(l) l.style.display = 'none';
+                el.classList.remove('hidden'); el.style.color = '#dc2626';
+                document.getElementById('deckStatusText').innerHTML = `❌ Error: ${e.message}`;
+            } finally {
+                btn.disabled = false; btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Generate Pitch Deck (PPTX & PDF)`;
+            }
+        }
+    </script>
+</body>
+</html>
