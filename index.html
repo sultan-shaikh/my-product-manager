@@ -516,7 +516,7 @@ input[type="file"]::-webkit-file-upload-button {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125-1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
     </svg>
-    Product Manager Co-Pilot <span>ENTERPRISE</span>
+    Product Manager Co-Pilot <span>MVP 1.0</span>
   </div>
   <div class="flex items-center gap-3">
     <input type="password" id="apiKey" placeholder="Gemini API Key" style="width:220px;padding:7px 12px;font-size:12px;">
@@ -1384,8 +1384,72 @@ Return ONLY valid JSON:
 
 // ══════════════════════════════════════════════
 // STAGE 2: PRD
-// ══════════════════════════════════════════════
-// ══════════════════════════════════════════════
+// --- Advanced Mermaid Sanitizer ---
+function sanitizeMermaid(raw) {
+  if (!raw) return '';
+  let code = raw
+    .replace(/^```mermaid\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .replace(/\\n/g, '\n')
+    .trim();
+  if (!code.startsWith('flowchart') && !code.startsWith('graph') && !code.startsWith('sequenceDiagram')) {
+    code = 'flowchart TD\n' + code;
+  }
+
+  // Strip all junk from a label — no quoting, just cleaning
+  function cleanLabel(text) {
+    return text
+      .replace(/^["\']+|["\']+$/g, '')   // strip wrapping quotes
+      .replace(/["\']/g, '')               // strip all internal quotes
+      .replace(/\[[^\]]*\]/g, '')          // remove nested [...]
+      .replace(/\([^)]*\)/g, ' ')           // replace (anything) with space
+      .replace(/[,;:<>{}|]/g, ' ')           // remove other special chars
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  const lines = code.split('\n').map(line => {
+    // 1. Cylinder nodes [(label)] and [("label")] — MUST go first
+    line = line.replace(/\[\("([^"]+)"\)\]/g, (_, t) => '[' + cleanLabel(t) + ']');
+    line = line.replace(/\[\(([^)]+)\)\]/g,   (_, t) => '[' + (cleanLabel(t) || 'DB') + ']');
+
+    // 2. Quoted square bracket nodes: ["label"] or [\'label\']
+    line = line.replace(/\["([^"]*)"\]/g, (_, t) => '[' + cleanLabel(t) + ']');
+    line = line.replace(/\[\'([^\']*)\'\]/g, (_, t) => '[' + cleanLabel(t) + ']');
+
+    // 3. Unquoted multi-word square bracket nodes: [multi word label]
+    line = line.replace(/\[([^\]"\[]+)\]/g, (_, t) => {
+      const clean = cleanLabel(t);
+      if (/^[A-Za-z0-9_]+$/.test(clean)) return '[' + clean + ']'; // bare ID — leave alone
+      return '[' + clean + ']';
+    });
+
+    // 4. Decision diamonds: {"label"} and {label}
+    line = line.replace(/\{"([^"]*)"\}/g, (_, t) => '{' + cleanLabel(t) + '}');
+    line = line.replace(/\{\'([^\']*)\'\}/g, (_, t) => '{' + cleanLabel(t) + '}');
+    line = line.replace(/\{([^}"\{]+)\}/g,  (_, t) => '{' + cleanLabel(t) + '}');
+
+    // 5. Edge labels: -->|label|
+    line = line.replace(/\|([^|"]+)\|/g, (_, t) => '|' + cleanLabel(t) + '|');
+
+    // 6. Kill any residual stray " left inside [ ] or { }
+    line = line.replace(/\[([^\]]*)\]/g, (_, inner) => '[' + inner.replace(/"/g, '').trim() + ']');
+    line = line.replace(/\{([^}]*)\}/g,   (_, inner) => {
+      // Don't mangle subgraph or direction lines
+      if (/^\s*(TD|LR|BT|RL)\s*$/.test(inner)) return '{' + inner + '}';
+      return '{' + inner.replace(/"/g, '').trim() + '}';
+    });
+
+    // 7. Replace empty labels
+    line = line.replace(/\[\s*\]/g, '[Node]');
+    line = line.replace(/\{\s*\}/g, '{Decision}');
+
+    return line;
+  });
+
+  return lines.join('\n');
+}
 // STAGE 2: PRD
 // ══════════════════════════════════════════════
 async function generatePRD() {
@@ -1413,7 +1477,7 @@ DISCOVERY FINDINGS:
 - Hypothesis: ${d.suggestedHypothesis || 'N/A'}
 
 Generate a Mermaid flowchart as a SINGLE LINE string using \\n for line breaks. Use flowchart TD.
-IMPORTANT: ALWAYS wrap node labels in double quotes. No markdown backticks.
+MERMAID RULES — CRITICAL: Node labels inside [ ] or { } must use ONLY plain words and spaces — absolutely NO parentheses, commas, quotes, colons, or special characters. WRONG: A["Login (SAML, OAuth)"] CORRECT: A[Login via SAML]. Edge labels after | | must also be plain words only. No backticks.
 
 Return ONLY valid JSON:
 {
@@ -1473,33 +1537,44 @@ Return ONLY valid JSON:
       </div>`;
 
     // UPDATED MERMAID LOGIC: Removed the buggy regex entirely
+    // UPDATED MERMAID LOGIC: Removed the buggy regex entirely
     const mc = document.getElementById('mermaidContainer');
     mc.innerHTML = ''; 
 
     if (prd.mermaidFlowchart) {
-      // 1. Basic sanitization
-      let cleanCode = prd.mermaidFlowchart
-        .replace(/^```mermaid\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .replace(/\\n/g, '\n')
-        .trim();
-
-      // 2. Add missing preamble
-      if (!cleanCode.startsWith('flowchart') && !cleanCode.startsWith('graph')) {
-        cleanCode = 'flowchart TD\n' + cleanCode;
-      }
-
+      const cleanCode = sanitizeMermaid(prd.mermaidFlowchart);
       document.getElementById('rawDiagramCode').textContent = cleanCode;
 
+      // Tier 1: try sanitized code
       try {
-        const uniqueId = 'mmd_' + Math.floor(Math.random() * 10000);
-        const { svg } = await mermaid.render(uniqueId, cleanCode);
+        const uid = 'mmd_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
+        const { svg } = await mermaid.render(uid, cleanCode);
         mc.innerHTML = DOMPurify.sanitize(svg);
         resetZoom();
-      } catch (me) {
-        mc.innerHTML = `<div style="color:var(--red);font-size:12px;padding:20px;background:var(--surface3);border-radius:8px;">
-          <strong>Diagram Syntax Error:</strong><br>${safeStr(me.message)}
-        </div>`;
+      } catch (err1) {
+        console.warn('Mermaid tier-1 failed, trying stripped fallback:', err1.message);
+        // Tier 2: strip to bare connection lines only
+        try {
+          const stripped = 'flowchart TD\n' + cleanCode.split('\n')
+            .filter(l => /-->|---/.test(l))
+            .map(l => l
+              .replace(/\[([^\]]+)\]/g,  (_, t) => '[' + t.replace(/[^a-zA-Z0-9 ]/g,'').trim().substring(0,25) + ']')
+              .replace(/\{([^}]+)\}/g,    (_, t) => '{' + t.replace(/[^a-zA-Z0-9 ?]/g,'').trim().substring(0,20) + '}')
+              .replace(/\|([^|]+)\|/g,    (_, t) => '|' + t.replace(/[^a-zA-Z0-9 ]/g,'').trim() + '|')
+            ).slice(0, 14).join('\n');
+          const { svg } = await mermaid.render('mmd_fb_' + Date.now(), stripped);
+          mc.innerHTML = DOMPurify.sanitize(svg) +
+            '<div style="font-size:10px;color:var(--amber);margin-top:8px;font-family:\'DM Mono\',monospace;padding:0 4px;">⚠ Simplified diagram — click { } Code to inspect or edit</div>';
+          resetZoom();
+        } catch (err2) {
+          // Tier 3: clean error with hint
+          mc.innerHTML =
+            '<div style="color:var(--red);font-size:12px;padding:20px;background:var(--surface3);border-radius:8px;border:1px solid rgba(248,113,113,0.2);">' +
+            '<strong style="font-family:\'DM Mono\',monospace;font-size:11px;">DIAGRAM PARSE ERROR</strong>' +
+            '<div style="margin-top:6px;color:var(--muted2);font-size:11px;">' + safeStr((err1.message||'').split('\n')[0]) + '</div>' +
+            '<div style="margin-top:10px;font-size:10px;color:var(--muted);">Click <strong>{ } Code</strong> to inspect and manually fix the diagram syntax.</div>' +
+            '</div>';
+        }
       }
     }
 
@@ -1683,7 +1758,7 @@ Return ONLY valid JSON:
     "headline": "One powerful sentence",
     "opportunity": "2 sentences — market size and urgency",
     "solution": "2 sentences — what we're building",
-    "businessCase": "3 bullet points with metrics/numbers",
+    "businessCase": ["metric/number bullet 1", "metric/number bullet 2", "metric/number bullet 3"], // <-- UPDATED THIS LINE
     "investment": "investment summary — team, timeline, cost estimate",
     "ask": "What you need from exec — budget, headcount, approval"
   },
