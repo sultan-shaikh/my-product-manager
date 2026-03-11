@@ -1,859 +1,1945 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Manager Co-Pilot</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-    
-    <style>
-        /* Print layout handling */
-        @media print {
-            @page { margin: 1cm; size: A4; }
-            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .no-print, nav, #inputSection, button { display: none !important; }
-            
-            body.print-report #reportSection { display: block !important; box-shadow: none; border: none; margin: 0; padding: 0; }
-            body.print-report #pdfProposalView { display: none !important; }
-            
-            body.print-proposal #reportSection { display: none !important; }
-            body.print-proposal #pdfProposalView { display: block !important; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Manager Co-Pilot — Sultan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+:root {
+--ink: #fcfcfd;       /* Main Paper background */
+  --ink2: #f3f4f6;      /* Nav/Tabs background (soft gray) */
+  --ink3: #e5e7eb;      /* Secondary accents */
+  --surface: #ffffff;   /* Card backgrounds (pure white) */
+  --surface2: #ffffff;  /* Input backgrounds */
+  --surface3: #f9fafb;  /* Hover states */
+  --border: #e2e8f0;    /* Thin subtle borders */
+  --border2: #cbd5e1;   /* Stronger borders */
+  --muted: #64748b;     /* Slate gray for secondary text */
+  --muted2: #94a3b8;    
+  --text: #0f172a;      /* Deep Slate for high-contrast text */
+  --text2: #334155;     /* Medium Slate for prose */
+  --accent: #6366f1;    /* Professional Indigo accent */
+  --accent2: #4f46e5;
+  --accentGlow: rgba(99, 102, 241, 0.1);
+  --green: #10b981;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --teal: #06b6d4;
+}
 
-            #printCover { display: flex !important; flex-direction: column; justify-content: center; height: 100vh; page-break-after: always; }
-            section { page-break-inside: avoid; margin-bottom: 2cm; }
-            .page-break { page-break-before: always; }
-            table, tr, td, th { page-break-inside: avoid; }
-            h1 { font-size: 24pt !important; color: #0f172a !important; }
-            h2 { font-size: 18pt !important; color: #4338CA !important; }
-            p, li, td { font-size: 10pt !important; }
-        }
+* { box-sizing: border-box; }
 
-        .loader {
-            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #4338CA;
-            width: 20px; height: 20px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .vision-box { border: 2px dashed #cbd5e1; transition: all 0.3s; }
-        .vision-box:hover { border-color: #4338CA; background-color: #eef2ff; }
-        .hidden-scope { display: none !important; }
-        
-        .prd-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; margin-bottom: 1rem; }
-        .prd-table th { background-color: #f1f5f9; color: #475569; font-weight: 600; text-transform: uppercase; padding: 10px; border: 1px solid #e2e8f0; font-size: 0.75rem; text-align: left; }
-        .prd-table td { border: 1px solid #e2e8f0; padding: 10px; vertical-align: top; }
-        
-        .tshirt-S { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
-        .tshirt-M { background: #fef9c3; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
-        .tshirt-L { background: #ffedd5; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
-        .tshirt-XL { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem;}
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+}
 
-        #diagramWrapper { position: relative; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; overflow-x: auto; }
-        #diagramWrapper svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
-        
-        .diagram-toolbar { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
-        .diagram-btn { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px; font-size: 0.7rem; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s; }
-        .diagram-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
-        #rawDiagramCode { display: none; background: #0f172a; color: #e2e8f0; font-family: monospace; font-size: 0.7rem; padding: 16px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; margin-top: 12px; }
-    </style>
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Stage pipeline */
+.pipeline {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--ink2);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.stage-tab {
+  flex: 1;
+  padding: 14px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  position: relative;
+}
+
+.stage-tab:last-child { border-right: none; }
+
+.stage-tab:hover { color: var(--text2); background: var(--surface); }
+
+.stage-tab.active {
+  color: var(--accent);
+  background: var(--surface2);
+}
+
+.stage-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.stage-tab.completed { color: var(--green); }
+.stage-tab.completed .stage-dot { background: var(--green); }
+
+.stage-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.stage-tab.active .stage-dot { background: var(--accent); }
+
+/* Panels */
+.panel {
+  display: none;
+  position: relative;
+  z-index: 1;
+}
+.panel.active { display: block; }
+
+/* Inputs */
+input[type="text"], input[type="password"], input[type="url"], textarea, select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accentGlow);
+}
+
+select option { background: var(--surface2); }
+
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 6px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 11px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text2); background: var(--surface); }
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Cards */
+.card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.card-header {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Status pill */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+}
+.status-pending { background: rgba(107,107,130,0.15); color: var(--muted2); }
+.status-running { background: rgba(124,106,247,0.15); color: var(--accent); }
+.status-done { background: rgba(52,211,153,0.12); color: var(--green); }
+.status-error { background: rgba(248,113,113,0.12); color: var(--red); }
+
+/* Progress bar */
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--teal));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* Loader */
+.loader {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(124,106,247,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Feedback cluster pills */
+.cluster-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+}
+
+/* RICE table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.data-table th {
+  background: var(--surface3);
+  color: var(--muted2);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+.data-table td {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: top;
+}
+.data-table tr:hover td { background: var(--surface3); }
+
+/* Stakeholder tabs */
+.view-tab {
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.04em;
+}
+.view-tab.active { color: var(--accent); border-color: var(--accent); }
+.view-tab:hover { color: var(--text2); }
+
+/* Output prose */
+.prose-dark { color: var(--text2); line-height: 1.7; font-size: 13px; }
+.prose-dark h1, .prose-dark h2, .prose-dark h3 { color: var(--text); font-family: 'Instrument Serif', serif; }
+.prose-dark strong { color: var(--text); }
+.prose-dark ul { padding-left: 18px; }
+.prose-dark li { margin-bottom: 4px; }
+.prose-dark p { margin-bottom: 10px; }
+
+/* Mermaid */
+#diagramWrapper { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 24px; overflow-x: auto; }
+#diagramWrapper svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+/* Jira ticket */
+.jira-ticket {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.jira-ticket:hover { border-color: var(--border2); }
+
+.ticket-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Signoff checkboxes */
+.signoff-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.signoff-item:hover { border-color: var(--border2); }
+.signoff-item.approved { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.05); }
+
+/* Divider */
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Nav */
+nav {
+  background: var(--ink2);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 60;
+}
+
+.nav-brand {
+  font-family: 'Instrument Serif', serif;
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-brand span {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accentGlow);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+}
+
+/* Accent line */
+.accentline {
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Score badge */
+.score-badge {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* File input */
+input[type="file"] {
+  background: var(--surface2);
+  border: 1px dashed var(--border2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--muted2);
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+}
+input[type="file"]::-webkit-file-upload-button {
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* Competitor card */
+.comp-card {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  position: relative;
+}
+.comp-card .remove-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+.comp-card .remove-btn:hover { color: var(--red); }
+
+/* OKR tag */
+.okr-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(124,106,247,0.1);
+  border: 1px solid rgba(124,106,247,0.25);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  margin: 3px;
+  cursor: pointer;
+}
+.okr-tag:hover { background: rgba(124,106,247,0.2); }
+
+/* Animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.35s ease forwards; }
+
+/* Print */
+@media print {
+  body::before { display: none; }
+  nav, .pipeline, .no-print { display: none !important; }
+  body { background: white; color: black; }
+  .prose-dark { color: #333; }
+}
+</style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-20 print-report">
+<body>
 
-    <nav class="bg-indigo-900 text-white p-4 shadow-lg sticky top-0 z-50 no-print">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                Product Manager Co-Pilot
-            </h1>
-            <div class="flex items-center gap-2 w-full md:w-auto">
-                <input type="password" id="apiKey" onchange="saveApiKey()" placeholder="Paste Gemini API Key Here" class="text-black text-sm p-2 rounded w-full md:w-64 border-2 border-indigo-500 focus:border-indigo-400 outline-none">
-                <button onclick="scanModels()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded border border-indigo-400 font-bold whitespace-nowrap shadow-sm">
-                    1. Scan Models
-                </button>
-            </div>
+<nav>
+  <div class="nav-brand">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125-1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
+    </svg>
+    Product Manager Co-Pilot <span>ENTERPRISE</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <input type="password" id="apiKey" placeholder="Gemini API Key" style="width:220px;padding:7px 12px;font-size:12px;">
+    <button onclick="scanModels()" class="btn-ghost btn-sm">⟳ Scan Models</button>
+    <select id="modelSelector" style="width:200px;padding:7px 10px;font-size:12px;" disabled>
+      <option>Scan first...</option>
+    </select>
+  </div>
+</nav>
+
+<div class="pipeline">
+  <div class="stage-tab active" id="tab-1" onclick="switchStage(1)">
+    <div class="stage-dot"></div>
+    <span>01 / Discovery</span>
+  </div>
+  <div class="stage-tab" id="tab-2" onclick="switchStage(2)">
+    <div class="stage-dot"></div>
+    <span>02 / Spec & PRD</span>
+  </div>
+  <div class="stage-tab" id="tab-3" onclick="switchStage(3)">
+    <div class="stage-dot"></div>
+    <span>03 / Sizing & Risk</span>
+  </div>
+  <div class="stage-tab" id="tab-4" onclick="switchStage(4)">
+    <div class="stage-dot"></div>
+    <span>04 / Signoff Package</span>
+  </div>
+</div>
+
+<main class="max-w-6xl mx-auto px-6 py-8 relative z-10">
+
+<div class="panel active" id="panel-1">
+  <div class="fade-up">
+
+    <div class="section-label">Product Definition</div>
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div>
+        <label>Feature / Product Name</label>
+        <input type="text" id="productName" placeholder="e.g. AI Anomaly Detection">
+      </div>
+      <div>
+        <label>Release Scope</label>
+        <select id="releaseScope">
+          <option>MVP / Beta</option>
+          <option>V1 General Availability</option>
+          <option>Fast-Follow Enhancement</option>
+          <option>Enterprise Tier Add-on</option>
+        </select>
+      </div>
+      <div>
+        <label>Target Personas</label>
+        <input type="text" id="targetPersonas" placeholder="e.g. SOC Analyst, CISO">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label>Strategic Context & Constraints</label>
+        <textarea id="strategicContext" rows="4" placeholder="What are we building and why? Mention technical constraints, out-of-scope items, or key business drivers."></textarea>
+      </div>
+      <div>
+        <label>Company OKRs <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-family:'DM Sans',sans-serif;">(one per line — AI will map alignment)</span></label>
+        <textarea id="companyOKRs" rows="4" placeholder="e.g. Increase enterprise ARR by 30%&#10;Reduce customer churn below 5%&#10;Achieve SOC 2 Type II certification"></textarea>
+      </div>
+    </div>
+
+    <div class="section-label">Competitive Intelligence</div>
+    <div class="card mb-6">
+      <div style="font-size:12px;color:var(--muted2);margin-bottom:14px;">Add competitor URLs or upload screenshots. The AI will extract positioning, features, and gaps to feed into your PRD.</div>
+      <div id="compInputs">
+        <div class="grid grid-cols-2 gap-3 mb-3" id="compRow0">
+          <input type="url" class="comp-url" placeholder="https://competitor.com/feature-page">
+          <div style="position:relative;">
+            <input type="file" accept="image/*" class="comp-img" style="padding:6px 10px;">
+            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted);pointer-events:none;">or screenshot</span>
+          </div>
         </div>
-    </nav>
+      </div>
+      <button onclick="addCompetitorRow()" class="btn-ghost btn-sm" style="margin-top:6px;">+ Add competitor</button>
+    </div>
 
-    <main class="max-w-[95%] xl:max-w-7xl mx-auto p-4 md:p-6">
-
-        <div id="inputSection" class="bg-white rounded-xl shadow-md p-6 border border-gray-200 no-print">
-            
-            <div class="mb-6 bg-slate-50 p-4 rounded border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div class="w-full">
-                    <label class="block text-sm font-bold text-slate-700 mb-1">2. Select AI Model</label>
-                    <select id="modelSelector" class="w-full p-2 border rounded border-slate-300 text-sm bg-white text-gray-500" disabled>
-                        <option>Waiting for Scan...</option>
-                    </select>
-                    <p id="modelCount" class="text-xs text-slate-500 mt-1 italic"></p>
-                </div>
-            </div>
-
-            <!-- Vision Section (Wireframes) -->
-            <div class="mb-8 p-6 rounded-xl vision-box bg-slate-50 text-center">
-                <h3 class="text-lg font-bold text-slate-700 mb-1 flex justify-center items-center gap-2">
-                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Have a Sketch, Wireframe, or Screenshot?
-                </h3>
-                <p class="text-xs text-slate-500 mb-4">Upload a whiteboard sketch or competitor screenshot. The AI will extract the core user journey and UI elements.</p>
-                <div id="imagePreviewBox" class="hidden mb-4 flex justify-center">
-                    <div class="relative inline-block">
-                        <img id="imagePreview" src="" alt="Wireframe preview" class="max-h-48 max-w-full rounded border border-indigo-200 shadow">
-                        <button onclick="clearDiagramImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs font-bold leading-5">×</button>
-                    </div>
-                </div>
-                <div class="flex flex-wrap justify-center gap-3">
-                    <input type="file" id="diagramInput" accept="image/*" onchange="previewImage(this)" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
-                    <button onclick="scanWireframe()" id="visionBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-6 rounded shadow transition-all">
-                        🔍 Analyze Visual Context
-                    </button>
-                </div>
-                <div id="visionResult" class="mt-4 text-xs text-left hidden p-3 bg-indigo-50 border border-indigo-100 rounded text-indigo-800"></div>
-            </div>
-
-            <!-- Product Requirements Input -->
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
-                <h2 class="text-lg font-bold text-gray-900">3. Product Definition</h2>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Feature / Product Name:</label>
-                    <input type="text" id="productName" placeholder="e.g., AI Log Summarization" class="w-full text-sm border border-gray-300 rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Target Personas:</label>
-                    <input type="text" id="targetPersonas" placeholder="e.g., SOC Analyst, Security Admin" class="w-full text-sm border border-gray-300 rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Release Scope:</label>
-                    <select id="releaseScope" class="w-full text-sm border border-gray-300 rounded px-3 py-2 bg-white">
-                        <option value="MVP / Beta">MVP / Beta</option>
-                        <option value="V1 General Availability">V1 General Availability</option>
-                        <option value="Fast-Follow Enhancement">Fast-Follow Enhancement</option>
-                        <option value="Enterprise Tier Add-on">Enterprise Tier Add-on</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div class="flex flex-col h-full">
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Strategic Context & Constraints:</label>
-                    <textarea id="strategicContext" placeholder="What are we building and why? Mention any specific technical constraints, out-of-scope items, or key business drivers." class="w-full flex-grow text-sm border border-gray-300 rounded px-3 py-2 min-h-[120px] resize-none"></textarea>
-                </div>
-                
-                <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg flex flex-col justify-center">
-                    <h4 class="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        Raw Customer Feedback (CSV)
-                    </h4>
-                    <p class="text-xs text-blue-700 mb-3">Upload an export of Zendesk tickets, SFDC notes, or user interviews. The AI will synthesize these into actionable user stories.</p>
-                    <input type="file" id="feedbackCsv" accept=".csv" class="block w-full text-xs text-blue-700 file:mr-4 file:py-1.5 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer bg-white border border-blue-200 p-1 rounded">
-                </div>
-            </div>
-
-            <button onclick="generatePRD()" id="generateBtn" class="w-full bg-indigo-900 hover:bg-indigo-800 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed border-b-4 border-indigo-600">
-                4. Generate PRD & Flowchart
-            </button>
-
-            <!-- STEP 5: GTM DECK -->
-            <div id="step5Section" class="mt-8 p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200">
-                <div class="mb-4 pb-2 border-b border-indigo-200">
-                    <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
-                        5. Internal GTM Alignment Deck
-                    </h3>
-                    <p class="text-xs text-indigo-700 mt-1">Generate the presentation to pitch this feature to Engineering, Sales, and Exec leadership.</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="space-y-3">
-                        <div><label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide">PM Name (Author)</label><input type="text" id="deckAuthor" placeholder="e.g. Jane Doe, Group PM" class="w-full text-xs border border-indigo-300 rounded px-2 py-1.5 bg-white"></div>
-                        <div class="flex gap-4 pt-1">
-                            <div class="flex-1">
-                                <label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide">Primary Brand Color</label>
-                                <div class="flex items-center gap-2 border border-indigo-300 rounded bg-white px-2 py-1">
-                                    <input type="color" id="themePrimary" value="#312E81" class="h-6 w-8 p-0 border-0 cursor-pointer bg-transparent">
-                                    <span class="text-[10px] text-gray-500 font-mono" id="themePrimaryLabel">#312E81</span>
-                                </div>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide">Accent Color</label>
-                                <div class="flex items-center gap-2 border border-indigo-300 rounded bg-white px-2 py-1">
-                                    <input type="color" id="themeAccent" value="#4F46E5" class="h-6 w-8 p-0 border-0 cursor-pointer bg-transparent">
-                                    <span class="text-[10px] text-gray-500 font-mono" id="themeAccentLabel">#4F46E5</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-indigo-900 mb-1 uppercase tracking-wide flex justify-between">Company Logo <span>(Opt)</span></label>
-                            <input type="file" accept="image/*" onchange="handleLogoUpload(this)" class="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer bg-white border border-indigo-300 rounded p-0.5">
-                        </div>
-                        <div class="bg-white p-2 border border-indigo-200 rounded">
-                            <label class="block text-[10px] font-bold text-indigo-900 mb-1.5 uppercase tracking-wide">Deck Contents</label>
-                            <div class="flex flex-wrap gap-x-3 gap-y-2 text-[10px] font-medium text-slate-700">
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideWhy" checked class="accent-indigo-600"> The Why (Market)</label>
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideWhat" checked class="accent-indigo-600"> The What (Solution)</label>
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlidePersonas" checked class="accent-indigo-600"> Personas</label>
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlidePricing" checked class="accent-indigo-600"> Pricing/Packaging</label>
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideSales" checked class="accent-indigo-600"> Sales Enablement</label>
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="chkSlideRoadmap" checked class="accent-indigo-600"> Roadmap</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 pt-4 border-t border-indigo-200 flex flex-wrap items-center gap-3">
-                    <button onclick="generateGTMDeck()" id="deckBtn" class="bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg shadow border-b-4 border-indigo-900 flex items-center gap-2 whitespace-nowrap transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                        Generate Pitch Deck (PPTX & PDF)
-                    </button>
-                    
-                    <button onclick="printProposalPDF()" id="printPdfBtn" class="hidden bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg shadow border-b-4 border-slate-600 flex items-center gap-2 whitespace-nowrap transition-all text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        Print Formal PDF
-                    </button>
-                    
-                    <div id="deckStatus" class="hidden text-xs text-indigo-700 flex items-center gap-2 font-medium">
-                        <span class="loader" style="width:14px;height:14px;border-width:2px;display:inline-block;border-top-color:#4338CA"></span>
-                        <span id="deckStatusText">Preparing...</span>
-                    </div>
-                </div>
-            </div>
+    <div class="section-label">Customer Feedback</div>
+    <div class="card mb-6">
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label>Upload Feedback CSV <span style="font-weight:400;text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;">(Zendesk, SFDC, interviews)</span></label>
+          <input type="file" id="feedbackCsv" accept=".csv" style="margin-bottom:10px;">
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;">AI will cluster by theme, rank by frequency/severity, and surface top verbatim quotes. Themes will appear before PRD generation so you can confirm them.</div>
         </div>
-
-        <!-- PRD REPORT SECTION -->
-        <div id="reportSection" class="hidden bg-white mt-8 shadow-xl rounded-xl border border-gray-200 overflow-hidden">
-            <div id="printCover" class="hidden p-12 bg-white text-center">
-                <div class="mb-10 text-indigo-600">
-                    <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                </div>
-                <h1 class="text-5xl font-bold text-slate-900 mb-4">Product Requirements Document (PRD)</h1>
-                <h2 class="text-2xl text-indigo-600 mb-12">Feature: <span id="coverFeature">TBD</span></h2>
-                <div class="text-slate-500 mt-auto"><p class="mb-2">Generated by Product Architect</p><p class="coverDate text-sm"></p></div>
-            </div>
-
-            <div class="bg-slate-900 text-white p-8 flex justify-between items-start no-print-cover">
-                <div>
-                    <h1 class="text-3xl font-bold" id="outFeatureName">Product Requirements Document</h1>
-                    <p class="text-slate-400 mt-1">Scope: <span id="outScope" class="text-indigo-400 font-bold"></span></p>
-                </div>
-                <div class="no-print">
-                    <button onclick="printTechnicalReport()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded flex items-center gap-2 shadow"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> Print PRD (PDF)</button>
-                </div>
-            </div>
-
-            <div class="p-8 space-y-8">
-                <!-- Exec Summary & Problem -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <section>
-                        <h3 class="text-lg font-bold text-slate-900 border-b pb-2 mb-3">Executive Summary</h3>
-                        <div id="outExecSummary" class="text-gray-700 leading-relaxed text-sm prose max-w-none"></div>
-                    </section>
-                    <section>
-                        <h3 class="text-lg font-bold text-slate-900 border-b pb-2 mb-3">Problem Statement</h3>
-                        <div id="outProblem" class="text-gray-700 leading-relaxed text-sm prose max-w-none"></div>
-                    </section>
-                </div>
-
-                <!-- Scope details -->
-                <section class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex flex-col md:flex-row gap-6">
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold text-indigo-900 mb-2 uppercase tracking-wide">Target Personas</h4>
-                        <div id="outPersonas" class="text-sm text-indigo-800"></div>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold text-indigo-900 mb-2 uppercase tracking-wide">Out of Scope (Anti-Goals)</h4>
-                        <div id="outOfScope" class="text-sm text-indigo-800"></div>
-                    </div>
-                </section>
-
-                <!-- Mermaid Diagram -->
-                <section class="break-inside-avoid">
-                    <div class="flex items-center justify-between mb-3 border-b pb-2">
-                        <h3 class="text-lg font-bold text-slate-900">User Flow / Architecture Diagram</h3>
-                        <div class="flex gap-2 no-print">
-                            <button class="diagram-btn" onclick="zoomDiagram(1.2)">＋ Zoom In</button>
-                            <button class="diagram-btn" onclick="zoomDiagram(0.8)">－ Zoom Out</button>
-                            <button class="diagram-btn" onclick="resetZoom()">↺ Reset</button>
-                            <button class="diagram-btn" onclick="toggleRawCode()">{ } Code</button>
-                        </div>
-                    </div>
-                    <div id="diagramWrapper"><div id="mermaidContainer" class="flex justify-center overflow-x-auto min-h-[200px]"></div></div>
-                    <pre id="rawDiagramCode"></pre>
-                </section>
-                
-                <!-- User Stories -->
-                <section class="break-inside-avoid">
-                    <h3 class="text-lg font-bold text-slate-900 border-b pb-2 mb-3">Agile User Stories</h3>
-                    <table class="prd-table bg-white">
-                        <thead>
-                            <tr>
-                                <th style="width:15%">Persona</th>
-                                <th style="width:30%">I want to...</th>
-                                <th style="width:25%">So that...</th>
-                                <th style="width:25%">Acceptance Criteria</th>
-                                <th style="width:5%; text-align:center">Effort</th>
-                            </tr>
-                        </thead>
-                        <tbody id="outStoriesBody"></tbody>
-                    </table>
-                </section>
-            </div>
+        <div>
+          <label>Wireframe / Screenshot</label>
+          <input type="file" id="diagramInput" accept="image/*" onchange="previewWireframe(this)">
+          <div id="wireframePreview" class="hidden mt-2" style="position:relative;display:inline-block;">
+            <img id="wireframeImg" src="" style="max-height:80px;border-radius:4px;border:1px solid var(--border);">
+            <button onclick="clearWireframe()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:18px;text-align:center;">×</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">AI will extract UI elements and user flow from the image.</div>
         </div>
+      </div>
+    </div>
 
-        <!-- PDF GTM DECK VIEW -->
-        <div id="pdfProposalView" class="hidden bg-white max-w-4xl mx-auto p-12 mt-8 text-slate-800 font-sans shadow-xl rounded border border-gray-200 mb-20">
-            <!-- Cover Page -->
-            <div id="pdfCoverBanner" class="text-center pb-12 mb-12 border-b-4 flex flex-col items-center justify-center min-h-[60vh]">
-                <img id="pdfCoverLogo" src="" class="h-24 object-contain mb-8" style="display:none;" alt="Company Logo">
-                <h1 class="text-5xl font-extrabold text-slate-900 mb-6 tracking-tight" id="pdfDeckTitle">GTM Alignment Deck</h1>
-                <p class="text-2xl font-medium mb-12" id="pdfCompanySubtitle" style="color: #312E81;">Feature: <span id="pdfFeatureLabel" class="font-bold"></span></p>
-                
-                <div class="mt-auto pt-12 text-sm text-gray-500 w-full flex justify-between border-t border-gray-200">
-                    <div class="text-left">
-                        <p class="font-bold text-gray-700">Prepared by:</p>
-                        <p id="pdfAuthorLabel"></p>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-bold text-gray-700">Date:</p>
-                        <p class="pdfDateLabel"></p>
-                    </div>
-                </div>
-            </div>
-            <!-- Dynamic Content Container -->
-            <div id="pdfContentContainer" class="space-y-12"></div>
+    <div id="feedbackClusters" class="hidden mb-6">
+      <div class="section-label">Feedback Clusters <span style="font-weight:400;text-transform:none;letter-spacing:0;font-family:'DM Sans';font-size:11px;color:var(--muted);">— confirm before generating PRD</span></div>
+      <div id="clustersContent" class="card"></div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="runDiscovery()" id="discoveryBtn" class="btn-primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+        Run Discovery Analysis
+      </button>
+      <div id="discoveryStatus" class="hidden flex items-center gap-2 text-xs" style="color:var(--muted2);">
+        <span class="loader"></span>
+        <span id="discoveryStatusText">Processing...</span>
+      </div>
+    </div>
+
+    <div id="discoveryResults" class="hidden mt-8">
+      <div class="section-label">Discovery Output</div>
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="card">
+          <div class="card-header">OKR Alignment</div>
+          <div id="okrAlignmentOut" class="prose-dark text-xs"></div>
         </div>
+        <div class="card">
+          <div class="card-header">Competitive Gaps</div>
+          <div id="competitiveOut" class="prose-dark text-xs"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Top Feedback Themes</div>
+          <div id="feedbackThemesOut" class="prose-dark text-xs"></div>
+        </div>
+      </div>
+      <div class="card mb-6">
+        <div class="card-header">JTBD Canvas</div>
+        <div id="jtbdOut"></div>
+      </div>
+      <button onclick="proceedToSpec()" class="btn-primary">
+        Proceed to Spec →
+      </button>
+    </div>
+  </div>
+</div>
 
-    </main>
+<div class="panel" id="panel-2">
+  <div class="fade-up">
+    <div class="flex items-center justify-between mb-6">
+      <div class="section-label" style="margin-bottom:0;">PRD & Specification</div>
+      <div class="flex gap-2">
+        <button onclick="generatePRD()" id="prdBtn" class="btn-primary">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+          Generate PRD
+        </button>
+        <div id="prdStatus" class="hidden flex items-center gap-2 text-xs" style="color:var(--muted2);">
+          <span class="loader"></span>
+          <span id="prdStatusText">Generating...</span>
+        </div>
+      </div>
+    </div>
 
-    <script>
-        // ── LOAD SAVED API KEY ON INIT ──
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('pmApiKey');
-            if (savedKey) document.getElementById('apiKey').value = savedKey;
-        });
+    <div id="prdOutput" class="hidden">
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <div class="card-header">Executive Summary</div>
+          <div id="outExecSummary" class="prose-dark"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Problem Statement</div>
+          <div id="outProblem" class="prose-dark"></div>
+        </div>
+      </div>
 
-        function saveApiKey() {
-            const key = document.getElementById('apiKey').value.trim();
-            if (key) localStorage.setItem('pmApiKey', key);
-        }
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <div class="card-header">Target Personas</div>
+          <div id="outPersonas" class="prose-dark text-sm"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Out of Scope / Anti-Goals</div>
+          <div id="outOfScope" class="prose-dark text-sm"></div>
+        </div>
+      </div>
 
-        // UI Binding
-        document.getElementById('themePrimary').addEventListener('input', function() { document.getElementById('themePrimaryLabel').innerText = this.value.toUpperCase(); });
-        document.getElementById('themeAccent').addEventListener('input', function() { document.getElementById('themeAccentLabel').innerText = this.value.toUpperCase(); });
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="section-label" style="margin-bottom:0;">User Flow Diagram</div>
+          <div class="flex gap-2 no-print">
+            <button onclick="zoomDiagram(1.2)" class="btn-ghost btn-sm">＋</button>
+            <button onclick="zoomDiagram(0.8)" class="btn-ghost btn-sm">－</button>
+            <button onclick="resetZoom()" class="btn-ghost btn-sm">↺ Reset</button>
+            <button onclick="toggleRawCode()" class="btn-ghost btn-sm">{ } Code</button>
+          </div>
+        </div>
+        <div id="diagramWrapper"><div id="mermaidContainer" style="min-height:150px;display:flex;justify-content:center;align-items:center;"></div></div>
+        <pre id="rawDiagramCode" style="display:none;background:var(--surface3);color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;padding:16px;border-radius:8px;white-space:pre-wrap;margin-top:10px;border:1px solid var(--border);"></pre>
+      </div>
 
-        document.querySelectorAll('.coverDate, .pdfDateLabel').forEach(el => {
-            el.innerText = new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
-        });
+      <div class="card mb-4">
+        <div class="card-header">Agile User Stories</div>
+        <table class="data-table" id="storiesTable">
+          <thead>
+            <tr>
+              <th style="width:14%">Persona</th>
+              <th style="width:28%">I want to…</th>
+              <th style="width:22%">So that…</th>
+              <th style="width:28%">Acceptance Criteria</th>
+              <th style="width:8%;text-align:center">Effort</th>
+            </tr>
+          </thead>
+          <tbody id="outStoriesBody"></tbody>
+        </table>
+      </div>
 
-        let companyLogoBase64 = null; 
-        let globalVisionContext = ""; 
-        let currentDiagramCode = "";
-        let diagramZoom = 1;
-        let cachedGtmData = null;
+      <div class="card mb-6">
+        <div class="card-header">OKR Alignment Mapping</div>
+        <div id="okrMappingDetail"></div>
+      </div>
 
-        function handleLogoUpload(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    companyLogoBase64 = e.target.result; 
-                    const pdfLogo = document.getElementById('pdfCoverLogo');
-                    pdfLogo.src = companyLogoBase64;
-                    pdfLogo.style.display = 'block';
-                };
-                reader.readAsDataURL(input.files[0]);
-            } else { companyLogoBase64 = null; document.getElementById('pdfCoverLogo').style.display = 'none'; }
-        }
+      <button onclick="proceedToSizing()" class="btn-primary">Proceed to Sizing →</button>
+    </div>
 
-        function previewImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    document.getElementById('imagePreview').src = e.target.result;
-                    document.getElementById('imagePreviewBox').classList.remove('hidden');
-                    document.getElementById('imagePreviewBox').classList.add('flex');
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-        function clearDiagramImage() {
-            document.getElementById('diagramInput').value = '';
-            document.getElementById('imagePreviewBox').classList.add('hidden');
-            document.getElementById('imagePreviewBox').classList.remove('flex');
-            globalVisionContext = "";
-            document.getElementById('visionResult').classList.add('hidden');
-        }
+    <div id="prdPlaceholder" class="card" style="text-align:center;padding:60px;color:var(--muted);">
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:8px;color:var(--muted2);">No PRD generated yet</div>
+      <div style="font-size:12px;">Complete Stage 1 Discovery first, then hit Generate PRD above.</div>
+    </div>
+  </div>
+</div>
 
-        // Diagram Controls
-        function zoomDiagram(factor) { diagramZoom *= factor; diagramZoom = Math.min(Math.max(diagramZoom, 0.3), 4); const svg = document.querySelector('#mermaidContainer svg'); if (svg) svg.style.transform = `scale(${diagramZoom})`; }
-        function resetZoom() { diagramZoom = 1; const svg = document.querySelector('#mermaidContainer svg'); if (svg) svg.style.transform = 'scale(1)'; }
-        function toggleRawCode() { const box = document.getElementById('rawDiagramCode'); box.style.display = box.style.display === 'block' ? 'none' : 'block'; }
+<div class="panel" id="panel-3">
+  <div class="fade-up">
+    <div class="flex items-center justify-between mb-6">
+      <div class="section-label" style="margin-bottom:0;">Sizing, RICE & Risk Register</div>
+      <div class="flex gap-2">
+        <button onclick="generateSizing()" id="sizingBtn" class="btn-primary">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+          Generate Sizing Analysis
+        </button>
+        <div id="sizingStatus" class="hidden flex items-center gap-2 text-xs" style="color:var(--muted2);">
+          <span class="loader"></span>
+          <span id="sizingStatusText">Analysing...</span>
+        </div>
+      </div>
+    </div>
 
-        const fileToBase64 = (file, maxPx = 1024) => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onerror = reject;
-            reader.onload = (e) => {
-                const img = new Image(); img.onerror = reject;
-                img.onload = () => {
-                    let { width, height } = img;
-                    if (width <= maxPx && height <= maxPx) { resolve(e.target.result.split(',')[1]); return; }
-                    const scale = maxPx / Math.max(width, height);
-                    width = Math.round(width * scale); height = Math.round(height * scale);
-                    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
-                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85).split(',')[1]);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
+    <div id="sizingOutput" class="hidden">
+      <div class="card mb-4">
+        <div class="card-header">RICE Prioritisation Scorecard</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:'DM Mono',monospace;">Reach × Impact × Confidence ÷ Effort</div>
+        <table class="data-table" id="riceTable">
+          <thead>
+            <tr>
+              <th>Feature / Story</th>
+              <th style="text-align:center">Reach</th>
+              <th style="text-align:center">Impact</th>
+              <th style="text-align:center">Confidence</th>
+              <th style="text-align:center">Effort (wks)</th>
+              <th style="text-align:center">RICE Score</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody id="riceBody"></tbody>
+        </table>
+      </div>
 
-        // Smart Rate Limiting Engine
-        async function fetchWithRetry(url, options, retries = 4, backoff = 10000, statusCb = null) {
-            for (let i = 0; i < retries; i++) {
-                let response;
-                try { response = await fetch(url, options); } 
-                catch (netErr) { if (i < retries - 1) { await new Promise(r => setTimeout(r, 2000)); continue; } throw new Error('Network error: ' + netErr.message); }
-                
-                if (response.ok) { try { return await response.json(); } catch (pe) { throw new Error('Could not parse JSON: ' + pe.message); } }
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <div class="card-header">Engineering Effort Breakdown</div>
+          <div id="effortOut" class="prose-dark text-sm"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Dependencies & Blockers</div>
+          <div id="dependenciesOut" class="prose-dark text-sm"></div>
+        </div>
+      </div>
 
-                let body; try { body = await response.json(); } catch (_) { body = null; }
-                const msg = body?.error?.message || body?.error?.status || ('HTTP ' + response.status);
+      <div class="card mb-6">
+        <div class="card-header">Risk Register</div>
+        <table class="data-table" id="riskTable">
+          <thead>
+            <tr>
+              <th>Risk</th>
+              <th style="text-align:center">Likelihood</th>
+              <th style="text-align:center">Impact</th>
+              <th>Mitigation</th>
+              <th>Owner</th>
+            </tr>
+          </thead>
+          <tbody id="riskBody"></tbody>
+        </table>
+      </div>
 
-                if ((response.status === 429 || response.status === 503) && i < retries - 1) {
-                    let waitMs = backoff;
-                    const retryMatch = msg.match(/retry in (\d+(\.\d+)?)s/i);
-                    if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1500; 
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <div class="section-label" style="margin-bottom:0;">Sprint-Ready Tickets</div>
+          <button onclick="exportJiraCSV()" class="btn-ghost btn-sm">⬇ Export Jira CSV</button>
+        </div>
+        <div id="ticketsOut"></div>
+      </div>
 
-                    if (statusCb) {
-                        let t = Math.ceil(waitMs / 1000); statusCb(`Rate limit paused. Auto-resuming in ${t}s…`);
-                        const tick = setInterval(() => { t--; if (t > 0 && statusCb) statusCb(`Rate limit paused. Auto-resuming in ${t}s…`); }, 1000);
-                        await new Promise(r => setTimeout(r, waitMs)); clearInterval(tick);
-                    } else { await new Promise(r => setTimeout(r, waitMs)); }
-                    backoff = Math.min(backoff * 1.5, 30000); continue;
-                }
-                throw new Error(`[HTTP ${response.status}] ` + msg); 
-            }
-            throw new Error('Request failed after retries.');
-        }
+      <button onclick="proceedToSignoff()" class="btn-primary">Proceed to Signoff Package →</button>
+    </div>
 
-        async function scanModels() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const select = document.getElementById('modelSelector');
-            if (!apiKey) { alert("Please paste API Key first!"); return; }
-            select.innerHTML = "<option>Scanning...</option>"; select.disabled = true;
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                const data = await response.json();
-                let validModels = (data.models || []).filter(m => m.supportedGenerationMethods?.includes("generateContent"));
-                const recommended = ['gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-2.5-pro'];
-                const modelSet = new Set(validModels.map(m => m.name.replace('models/', '')));
-                recommended.forEach(rec => modelSet.add(rec));
-                select.innerHTML = ""; let preferred = null;
-                Array.from(modelSet).forEach(name => {
-                    const opt = document.createElement('option'); opt.value = name; opt.text = name; select.appendChild(opt);
-                    if (name.includes('gemini-2.5-flash')) preferred = name;
-                    else if (!preferred && name.includes('gemini-2.0-flash')) preferred = name;
-                });
-                if (preferred) select.value = preferred;
-                select.disabled = false;
-                document.getElementById('modelCount').innerText = `${modelSet.size} models available. Auto-selected: ${preferred}`;
-            } catch (e) { alert("Network Error: " + e.message); select.innerHTML = "<option>Scan Failed</option>"; }
-        }
+    <div id="sizingPlaceholder" class="card" style="text-align:center;padding:60px;color:var(--muted);">
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:8px;color:var(--muted2);">No sizing data yet</div>
+      <div style="font-size:12px;">Complete Stage 2 PRD generation first.</div>
+    </div>
+  </div>
+</div>
 
-        function extractJSON(raw) {
-            let cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-            const start = cleaned.indexOf('{'); const end = cleaned.lastIndexOf('}');
-            if (start === -1 || end === -1 || end <= start) throw new Error('No JSON object found.');
-            cleaned = cleaned.substring(start, end + 1);
-            try { return JSON.parse(cleaned); } catch (_) {}
-            try { return JSON.parse(cleaned.replace(/,\s*([}\]])/g, '$1')); } catch (_) {}
-            try { return JSON.parse(cleaned.replace(/([^\\])\\n/g, '$1\\\\n')); } catch (_) {}
-            throw new Error('Could not parse AI response as JSON.');
-        }
+<div class="panel" id="panel-4">
+  <div class="fade-up">
+    <div class="flex items-center justify-between mb-6">
+      <div class="section-label" style="margin-bottom:0;">Signoff Package</div>
+      <div class="flex gap-3">
+        <button onclick="generateSignoffPackage()" id="signoffBtn" class="btn-primary">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/></svg>
+          Generate All Outputs
+        </button>
+        <button onclick="downloadAllPPTX()" id="pptxBtn" class="btn-ghost hidden">⬇ PPTX Deck</button>
+        <div id="signoffStatus" class="hidden flex items-center gap-2 text-xs" style="color:var(--muted2);">
+          <span class="loader"></span>
+          <span id="signoffStatusText">Building...</span>
+        </div>
+      </div>
+    </div>
 
-        // Vision Scanner
-        async function scanWireframe() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelSelector').value;
-            const fileInput = document.getElementById('diagramInput');
-            const btn = document.getElementById('visionBtn');
-            const resEl = document.getElementById('visionResult');
+    <div id="signoffOutput" class="hidden">
+      <div class="flex gap-0 border-b mb-6" style="border-color:var(--border);">
+        <div class="view-tab active" id="vtab-exec" onclick="switchView('exec')">Exec 1-Pager</div>
+        <div class="view-tab" id="vtab-eng" onclick="switchView('eng')">Engineering Spec</div>
+        <div class="view-tab" id="vtab-sales" onclick="switchView('sales')">Sales GTM Brief</div>
+      </div>
 
-            if (!apiKey) return alert("Please enter API Key first!");
-            if (modelName.includes("Wait")) return alert("Click 'Scan Models' first!");
-            if (fileInput.files.length === 0) return alert("Please select an image file first.");
+      <div id="view-exec" class="view-panel">
+        <div class="card mb-4">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div class="accentline" style="height:40px;"></div>
+            <div>
+              <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--text);" id="execTitle">Executive 1-Pager</div>
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);">CONFIDENTIAL · INTERNAL ONLY</div>
+            </div>
+          </div>
+          <div id="execContent" class="prose-dark"></div>
+        </div>
+      </div>
 
-            btn.disabled = true; btn.innerHTML = '<span class="loader mx-auto" style="width:16px;height:16px;border-width:2px;display:inline-block"></span>';
-            resEl.classList.remove('hidden'); resEl.innerText = "Analyzing visual context...";
+      <div id="view-eng" class="view-panel hidden">
+        <div class="card mb-4">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div class="accentline" style="height:40px;background:var(--teal);"></div>
+            <div>
+              <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--text);" id="engTitle">Engineering Specification</div>
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);">TECHNICAL · IMPLEMENTATION READY</div>
+            </div>
+          </div>
+          <div id="engContent" class="prose-dark"></div>
+        </div>
+      </div>
 
-            try {
-                const base64Image = await fileToBase64(fileInput.files[0]);
-                const mimeType = fileInput.files[0].type;
-                const prompt = `Analyze this UI wireframe, whiteboard sketch, or app screenshot. Output ONLY valid JSON: {"summary": "Brief description of what this UI does", "elements": ["List of core UI elements/buttons"], "userFlow": "Step by step flow inferred from the image"}`;
-                
-                const apiResult = await fetchWithRetry(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType, data: base64Image } }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 2000 } }) },
-                    3, 10000, (msg) => { resEl.innerText = msg; }
-                );
+      <div id="view-sales" class="view-panel hidden">
+        <div class="card mb-4">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div class="accentline" style="height:40px;background:var(--green);"></div>
+            <div>
+              <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--text);" id="salesTitle">Sales GTM Brief</div>
+              <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);">GO-TO-MARKET · SALES ENABLEMENT</div>
+            </div>
+          </div>
+          <div id="salesContent" class="prose-dark"></div>
+        </div>
+      </div>
 
-                if (!apiResult.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error(`AI returned no content.`);
-                const data = extractJSON(apiResult.candidates[0].content.parts[0].text);
-                
-                globalVisionContext = `Wireframe Summary: ${data.summary}. Elements: ${data.elements.join(', ')}. Flow: ${data.userFlow}.`;
-                resEl.innerHTML = `✅ <strong>Vision Extracted:</strong> ${data.summary}<br><span class="text-gray-500">Stored as context for PRD generation.</span>`;
-            } catch (e) {
-                resEl.innerHTML = `❌ <strong>Error:</strong> ${e.message}`; globalVisionContext = "";
-            } finally { btn.disabled = false; btn.innerHTML = '🔍 Analyze Visual Context'; }
-        }
+      <div class="section-label">Approval Trail</div>
+      <div class="grid grid-cols-2 gap-3 mb-6" id="signoffTrail">
+        <div class="signoff-item" onclick="toggleApproval(this)">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          <div class="flex-1">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);">Engineering Lead</div>
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);">Technical feasibility sign-off</div>
+          </div>
+          <div class="approval-status status-pill status-pending" style="font-size:10px;">Pending</div>
+        </div>
+        <div class="signoff-item" onclick="toggleApproval(this)">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          <div class="flex-1">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);">Design Lead</div>
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);">UX & feasibility sign-off</div>
+          </div>
+          <div class="approval-status status-pill status-pending" style="font-size:10px;">Pending</div>
+        </div>
+        <div class="signoff-item" onclick="toggleApproval(this)">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          <div class="flex-1">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);">VP Product</div>
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);">Strategic priority confirmation</div>
+          </div>
+          <div class="approval-status status-pill status-pending" style="font-size:10px;">Pending</div>
+        </div>
+        <div class="signoff-item" onclick="toggleApproval(this)">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          <div class="flex-1">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);">Sales / Revenue Lead</div>
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);">Go-to-market readiness</div>
+          </div>
+          <div class="approval-status status-pill status-pending" style="font-size:10px;">Pending</div>
+        </div>
+      </div>
+    </div>
 
-        // Generate PRD
-        async function generatePRD() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelSelector').value;
-            const btn = document.getElementById('generateBtn');
+    <div id="signoffPlaceholder" class="card" style="text-align:center;padding:60px;color:var(--muted);">
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:8px;color:var(--muted2);">Signoff package not ready</div>
+      <div style="font-size:12px;">Complete Stages 1–3 first, then generate all outputs here.</div>
+    </div>
+  </div>
+</div>
 
-            if (!apiKey) return alert("Please enter API Key.");
-            if (modelName.includes("Wait")) return alert("Click 'Scan Models' first!");
+</main>
 
-            const prodName = document.getElementById('productName').value || "New Feature";
-            const personas = document.getElementById('targetPersonas').value || "End Users";
-            const scope = document.getElementById('releaseScope').value;
-            const context = document.getElementById('strategicContext').value;
-            
-            // Read CSV if exists
-            let csvText = "";
-            const csvInput = document.getElementById('feedbackCsv');
-            if (csvInput.files.length > 0) {
-                const text = await csvInput.files[0].text();
-                // Take first ~30 rows to prevent massive token overflow
-                csvText = text.split('\n').slice(0, 30).join('\n'); 
-            }
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentStage = 1;
+let globalVisionContext = '';
+let cachedDiscovery = null;
+let cachedPRD = null;
+let cachedSizing = null;
+let cachedSignoff = null;
+let wireframeBase64 = null;
+let jiraTickets = [];
+let compRowCount = 1;
 
-            btn.disabled = true;
-            btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span class="loader" style="display:inline-block"></span> Synthesizing PRD...</span>';
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('pmApiKey');
+  if (saved) document.getElementById('apiKey').value = saved;
+  document.getElementById('apiKey').addEventListener('change', () => {
+    localStorage.setItem('pmApiKey', document.getElementById('apiKey').value.trim());
+  });
+  mermaid.initialize({ startOnLoad: false, theme: 'dark', flowchart: { htmlLabels: false }, themeVariables: { primaryColor: '#7c6af7', background: '#18181f', mainBkg: '#22222c', nodeBorder: '#363648', lineColor: '#6b6b82', textColor: '#e8e8f0' } });
+});
 
-            const prompt = `You are a Senior Group Product Manager. Create a PRD for feature: "${prodName}". Target Personas: ${personas}. Release Scope: ${scope}.
-Strategic Context: ${context || 'None provided.'}
-Visual Context (if any): ${globalVisionContext || 'None provided.'}
-Raw Feedback/Tickets: \n${csvText || 'None provided.'}\n
+// ══════════════════════════════════════════════
+// NAVIGATION & STATE CLEARING
+// ══════════════════════════════════════════════
+function switchStage(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + n).classList.add('active');
+  document.getElementById('tab-' + n).classList.add('active');
+  currentStage = n;
+}
 
-INSTRUCTIONS:
-Generate a structured JSON output representing the PRD and a Mermaid Flowchart.
-For the Mermaid Flowchart, output a SINGLE LINE string using "\\n" for line breaks. Do NOT use markdown backticks in the mermaid string. Use a standard 'flowchart TD' or 'sequenceDiagram'.
+function proceedToSpec() { markComplete(1); switchStage(2); }
+function proceedToSizing() { markComplete(2); switchStage(3); }
+function proceedToSignoff() { markComplete(3); switchStage(4); }
 
-OUTPUT FORMAT (ONLY JSON):
+function markComplete(n) {
+  const tab = document.getElementById('tab-' + n);
+  tab.classList.remove('active');
+  tab.classList.add('completed');
+  tab.querySelector('.stage-dot').style.background = 'var(--green)';
+}
+
+// Clear downstream state when a user reruns a previous step
+function clearDownstreamState(fromStage) {
+  if (fromStage <= 1) {
+    cachedPRD = null;
+    document.getElementById('prdOutput').classList.add('hidden');
+    document.getElementById('prdPlaceholder').classList.remove('hidden');
+    document.getElementById('tab-2').classList.remove('completed');
+    document.getElementById('tab-2').querySelector('.stage-dot').style.background = 'var(--muted)';
+  }
+  if (fromStage <= 2) {
+    cachedSizing = null;
+    document.getElementById('sizingOutput').classList.add('hidden');
+    document.getElementById('sizingPlaceholder').classList.remove('hidden');
+    document.getElementById('tab-3').classList.remove('completed');
+    document.getElementById('tab-3').querySelector('.stage-dot').style.background = 'var(--muted)';
+  }
+  if (fromStage <= 3) {
+    cachedSignoff = null;
+    document.getElementById('signoffOutput').classList.add('hidden');
+    document.getElementById('pptxBtn').classList.add('hidden');
+    document.getElementById('signoffPlaceholder').classList.remove('hidden');
+    document.getElementById('tab-4').classList.remove('completed');
+    document.getElementById('tab-4').querySelector('.stage-dot').style.background = 'var(--muted)';
+  }
+}
+
+// ══════════════════════════════════════════════
+// UTILITIES & SECURITY
+// ══════════════════════════════════════════════
+
+// Secure string interpolator to prevent XSS in HTML templates
+const safeStr = (s) => {
+  if (s == null) return '';
+  return String(s).replace(/[&<>'"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m]));
+};
+
+// Safe Markdown renderer utilizing DOMPurify
+const md = (s) => {
+  if (!s) return '';
+  let parsed = Array.isArray(s) 
+    ? marked.parse(s.map(v => String(v).startsWith('-') ? v : '- ' + v).join('\n'))
+    : marked.parse(String(s));
+  return DOMPurify.sanitize(parsed);
+};
+
+async function fetchWithRetry(url, options, retries = 4, backoff = 10000, statusCb = null) {
+  for (let i = 0; i < retries; i++) {
+    let response;
+    try { response = await fetch(url, options); }
+    catch (e) { if (i < retries - 1) { await sleep(2000); continue; } throw new Error('Network error: ' + e.message); }
+    if (response.ok) { try { return await response.json(); } catch (pe) { throw new Error('JSON parse error: ' + pe.message); } }
+    let body; try { body = await response.json(); } catch (_) { body = null; }
+    const msg = body?.error?.message || ('HTTP ' + response.status);
+    if ((response.status === 429 || response.status === 503) && i < retries - 1) {
+      let waitMs = backoff;
+      const m = msg.match(/retry in (\d+(\.\d+)?)s/i);
+      if (m) waitMs = Math.ceil(parseFloat(m[1]) * 1000) + 1500;
+      if (statusCb) {
+        let t = Math.ceil(waitMs / 1000); statusCb(`Rate limited — resuming in ${t}s…`);
+        const tick = setInterval(() => { t--; if (t > 0 && statusCb) statusCb(`Rate limited — resuming in ${t}s…`); }, 1000);
+        await sleep(waitMs); clearInterval(tick);
+      } else { await sleep(waitMs); }
+      backoff = Math.min(backoff * 1.5, 30000); continue;
+    }
+    throw new Error(`[${response.status}] ` + msg);
+  }
+  throw new Error('Request failed after retries.');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function extractJSON(raw) {
+  let s = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a === -1 || b === -1) throw new Error('No JSON found in response.');
+  s = s.substring(a, b + 1);
+  
+  try { return JSON.parse(s); } catch (_) {}
+  try { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); } catch (_) {}
+  
+  // If it still fails, log the raw text to the browser console for debugging
+  console.error("AI JSON Parse Failed. Raw Output from AI:", s);
+  throw new Error('AI hallucinated invalid JSON formatting (likely an unescaped quote). Please click Generate again.');
+}
+
+const apiCall = async (prompt, statusCb, maxTokens = 8192) => {
+  const key = document.getElementById('apiKey').value.trim();
+  const rawModel = document.getElementById('modelSelector').value;
+  const model = rawModel.replace(/^models\//, '').replace(/^★\s*/, '').trim();
+  if (!key) throw new Error('No API key entered.');
+  if (!model || model.includes('Scan') || model.includes('...')) throw new Error('Click ⟳ Scan Models first to load available models.');
+  if (!model.startsWith('gemini')) throw new Error(`Invalid model name: "${model}". Please re-scan models.`);
+  const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.35, maxOutputTokens: maxTokens, responseMimeType: 'application/json' } };
+  const r = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 4, 10000, statusCb);
+  const text = r?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('AI returned no content. Reason: ' + (r?.candidates?.[0]?.finishReason || 'unknown'));
+  return extractJSON(text);
+};
+
+const apiCallWithImage = async (promptParts, statusCb, maxTokens = 4096) => {
+  const key = document.getElementById('apiKey').value.trim();
+  const model = document.getElementById('modelSelector').value.replace(/^models\//, '').replace(/^★\s*/, '').trim();
+  const body = { contents: [{ parts: promptParts }], generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens, responseMimeType: 'application/json' } };
+  const r = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 4, 10000, statusCb);
+  const text = r?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('AI returned no content.');
+  return extractJSON(text);
+};
+
+function setStatus(elId, textElId, msg, visible = true) {
+  const el = document.getElementById(elId);
+  const textEl = document.getElementById(textElId);
+  if (!el || !textEl) return;
+  el.classList.toggle('hidden', !visible);
+  if (textEl) textEl.textContent = msg;
+}
+
+const fileToBase64 = (file, maxPx = 1024) => new Promise((res, rej) => {
+  const reader = new FileReader();
+  reader.onerror = rej;
+  reader.onload = (e) => {
+    const img = new Image(); img.onerror = rej;
+    img.onload = () => {
+      let { width, height } = img;
+      if (width <= maxPx && height <= maxPx) { res(e.target.result.split(',')[1]); return; }
+      const scale = maxPx / Math.max(width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      res(canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85).split(',')[1]);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ══════════════════════════════════════════════
+// MODEL SCAN
+// ══════════════════════════════════════════════
+async function scanModels() {
+  const key = document.getElementById('apiKey').value.trim();
+  const sel = document.getElementById('modelSelector');
+  if (!key) { alert('Paste API key first.'); return; }
+  sel.innerHTML = '<option>Scanning...</option>'; sel.disabled = true;
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
+
+    const valid = (data.models || [])
+      .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+      .map(m => m.name.replace(/^models\//, '').trim())
+      .filter(n => n.startsWith('gemini') && !n.includes('embedding') && !n.includes('aqa'));
+
+    const priority = n => {
+      if (n.includes('3.1')) return 0;
+      if (n.includes('3.0')) return 1;
+      if (n.includes('2.5') && n.includes('flash')) return 2;
+      if (n.includes('2.5') && n.includes('pro'))   return 3;
+      if (n.includes('2.0') && n.includes('flash')) return 4;
+      if (n.includes('2.0'))                         return 5;
+      if (n.includes('1.5') && n.includes('flash')) return 6;
+      if (n.includes('1.5'))                         return 7;
+      return 8;
+    };
+    valid.sort((a, b) => priority(a) - priority(b));
+
+    if (valid.length === 0) throw new Error('No generateContent models found for this key.');
+
+    sel.innerHTML = '';
+    valid.forEach(name => {
+      const o = document.createElement('option');
+      o.value = name;
+      o.text = (name === valid[0] ? '★ ' : '') + name;
+      sel.appendChild(o);
+    });
+    sel.value = valid[0];
+    sel.disabled = false;
+  } catch (e) {
+    console.error('scanModels error:', e);
+    const fallbacks = ['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-pro'];
+    sel.innerHTML = '';
+    fallbacks.forEach(n => {
+      const o = document.createElement('option'); o.value = n; o.text = n; sel.appendChild(o);
+    });
+    sel.value = fallbacks[0];
+    sel.disabled = false;
+    setStatus('discoveryStatus', 'discoveryStatusText', `⚠ Scan failed (${e.message}) — using fallback models`, true);
+  }
+}
+
+// ══════════════════════════════════════════════
+// WIREFRAME & COMPETITOR INPUTS
+// ══════════════════════════════════════════════
+function previewWireframe(input) {
+  if (!input.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('wireframeImg').src = DOMPurify.sanitize(e.target.result); // Prevent malicious SVG data URIs
+    document.getElementById('wireframePreview').classList.remove('hidden');
+    document.getElementById('wireframePreview').style.display = 'inline-block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function clearWireframe() {
+  document.getElementById('diagramInput').value = '';
+  wireframeBase64 = null; globalVisionContext = '';
+  document.getElementById('wireframePreview').classList.add('hidden');
+}
+
+function addCompetitorRow() {
+  const cont = document.getElementById('compInputs');
+  const row = document.createElement('div');
+  row.className = 'grid grid-cols-2 gap-3 mb-3';
+  row.id = 'compRow' + compRowCount;
+  row.innerHTML = `
+    <input type="url" class="comp-url" placeholder="https://competitor.com/feature-page">
+    <div style="position:relative;display:flex;gap:8px;align-items:center;">
+      <input type="file" accept="image/*" class="comp-img" style="padding:6px 10px;flex:1;">
+      <button onclick="document.getElementById('compRow${compRowCount}').remove()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:6px 10px;cursor:pointer;font-size:12px;">✕</button>
+    </div>`;
+  cont.appendChild(row);
+  compRowCount++;
+}
+
+// ══════════════════════════════════════════════
+// STAGE 1: DISCOVERY
+// ══════════════════════════════════════════════
+async function runDiscovery() {
+  const btn = document.getElementById('discoveryBtn');
+  const setS = (msg) => setStatus('discoveryStatus', 'discoveryStatusText', msg, true);
+  
+  clearDownstreamState(1); // Reset stale downstream states
+  btn.disabled = true;
+
+  try {
+    const prodName = document.getElementById('productName').value || 'New Feature';
+    const personas = document.getElementById('targetPersonas').value || 'End Users';
+    const scope = document.getElementById('releaseScope').value;
+    const context = document.getElementById('strategicContext').value;
+    const okrs = document.getElementById('companyOKRs').value;
+
+    let visionCtx = '';
+    const wfFile = document.getElementById('diagramInput').files?.[0];
+    if (wfFile) {
+      setS('Analysing wireframe...');
+      wireframeBase64 = await fileToBase64(wfFile);
+      const parts = [
+        { text: 'Analyze this UI wireframe. Return JSON: {"summary":"what this does","elements":["core UI elements"],"userFlow":"step by step flow"}' },
+        { inlineData: { mimeType: wfFile.type, data: wireframeBase64 } }
+      ];
+      const vd = await apiCallWithImage(parts, setS, 2048);
+      visionCtx = `UI: ${vd.summary}. Elements: ${(vd.elements||[]).join(', ')}. Flow: ${vd.userFlow}`;
+    }
+
+    let compImgContexts = [];
+    const compImgInputs = document.querySelectorAll('.comp-img');
+    for (let f of compImgInputs) {
+      if (f.files?.[0]) {
+        setS('Analysing competitor screenshot...');
+        const b64 = await fileToBase64(f.files[0]);
+        const parts = [
+          { text: 'Analyse this competitor product screenshot. Return JSON: {"competitorFeatures":["features visible"],"gaps":["what appears missing"]}' },
+          { inlineData: { mimeType: f.files[0].type, data: b64 } }
+        ];
+        const cd = await apiCallWithImage(parts, setS, 1024);
+        compImgContexts.push(JSON.stringify(cd));
+      }
+    }
+
+    // PapaParse Implementation for robust CSV handling
+    let feedbackCtx = '';
+    let clusters = [];
+    const csvFile = document.getElementById('feedbackCsv').files?.[0];
+    if (csvFile) {
+      setS('Clustering feedback...');
+      const rawText = await csvFile.text();
+      const parsedCsv = Papa.parse(rawText, { header: true, skipEmptyLines: true });
+      const slicedCsv = Papa.unparse(parsedCsv.data.slice(0, 50));
+      
+      const fp = `Cluster this customer feedback CSV into themes. Return JSON:
+{"clusters":[{"theme":"Theme Name","count":5,"severity":"High|Medium|Low","verbatims":["quote1","quote2"],"insight":"1-sentence insight"}],"topInsight":"Overall finding"}
+CSV:
+${slicedCsv}`;
+      const fd = await apiCall(fp, setS, 4096);
+      clusters = fd.clusters || [];
+      feedbackCtx = `Top feedback themes: ${clusters.map(c => `${c.theme} (${c.count} mentions, ${c.severity})`).join('; ')}. ${fd.topInsight || ''}`;
+
+      document.getElementById('feedbackClusters').classList.remove('hidden');
+      document.getElementById('clustersContent').innerHTML = clusters.map((c, i) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;border-bottom:1px solid var(--border);${i===clusters.length-1?'border-bottom:none':''}">
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <span class="cluster-badge" style="background:${c.severity==='High'?'rgba(248,113,113,0.15)':c.severity==='Medium'?'rgba(251,191,36,0.15)':'rgba(52,211,153,0.12)'};color:${c.severity==='High'?'var(--red)':c.severity==='Medium'?'var(--amber)':'var(--green)'};">${safeStr(c.severity)}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--text);">${safeStr(c.count)}</span>
+            <span style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;">mentions</span>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:4px;">${safeStr(c.theme)}</div>
+            <div style="font-size:11px;color:var(--muted2);margin-bottom:8px;">${safeStr(c.insight)}</div>
+            ${c.verbatims?.slice(0,2).map(v => `<div style="font-size:11px;color:var(--muted);font-style:italic;border-left:2px solid var(--border2);padding-left:8px;margin-bottom:4px;">"${safeStr(v)}"</div>`).join('')}
+          </div>
+        </div>`).join('');
+    }
+
+    setS('Running OKR alignment & JTBD analysis...');
+    const compUrls = Array.from(document.querySelectorAll('.comp-url')).map(i => i.value.trim()).filter(Boolean);
+
+    const prompt = `You are a Senior Group PM at an enterprise software company. Perform a discovery analysis for:
+FEATURE: "${prodName}" | SCOPE: ${scope} | PERSONAS: ${personas}
+CONTEXT: ${context || 'None provided.'}
+OKRs: ${okrs || 'None provided.'}
+WIREFRAME CONTEXT: ${visionCtx || 'None.'}
+COMPETITOR URLS: ${compUrls.join(', ') || 'None.'}
+COMPETITOR ANALYSIS: ${compImgContexts.join(' | ') || 'None.'}
+FEEDBACK SUMMARY: ${feedbackCtx || 'None.'}
+
+Return ONLY valid JSON:
 {
-  "execSummary": "2-3 paragraphs explaining what we are building and why (Single String).",
-  "problemStatement": "1-2 paragraphs detailing the user pain points (Single String).",
-  "outOfScope": "Markdown bullet points of what is NOT in this release (Single String).",
+  "okrAlignment": [{"okr":"OKR text","alignmentScore":8,"rationale":"why this feature moves this OKR","contribution":"High|Medium|Low"}],
+  "competitiveGaps": ["gap1","gap2","gap3","gap4"],
+  "competitivePositioning": "2-sentence positioning statement vs competitors",
+  "feedbackThemes": [{"theme":"name","priority":"P0|P1|P2","pmNote":"actionable insight"}],
+  "jtbd": {
+    "primaryJob": "When [situation], I want to [motivation], so I can [expected outcome]",
+    "functionalJobs": ["functional job 1","functional job 2"],
+    "emotionalJobs": ["emotional need 1","emotional need 2"],
+    "socialJobs": ["social job 1"],
+    "jobStories": [
+      {"situation":"When...","motivation":"I want to...","outcome":"So I can...","currentSolution":"What they use today","painLevel":"High|Medium|Low"}
+    ]
+  },
+  "suggestedHypothesis": "We believe [feature] will [outcome] for [persona] because [rationale]. We'll know this is true when [metric]."
+}`;
+
+    const d = await apiCall(prompt, setS, 8192);
+    cachedDiscovery = { ...d, clusters, prodName, personas, scope, context, okrs, feedbackCtx, visionCtx, compUrls };
+
+    // Render logic using safeStr
+    document.getElementById('okrAlignmentOut').innerHTML = (d.okrAlignment || []).map(o => `
+      <div style="margin-bottom:10px;padding:8px;background:var(--surface3);border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">${safeStr(o.okr)}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${(o.alignmentScore||0)*10}%;background:${o.alignmentScore>=7?'var(--green)':o.alignmentScore>=4?'var(--amber)':'var(--red)'};border-radius:2px;"></div></div>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);">${safeStr(o.alignmentScore)}/10</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);">${safeStr(o.rationale)}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">No OKRs provided.</div>';
+
+    document.getElementById('competitiveOut').innerHTML = `
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-style:italic;">${safeStr(d.competitivePositioning)}</div>
+      ${(d.competitiveGaps || []).map(g => `<div style="display:flex;gap:6px;margin-bottom:6px;font-size:11px;color:var(--text2);"><span style="color:var(--accent);flex-shrink:0;">▸</span>${safeStr(g)}</div>`).join('')}`;
+
+    document.getElementById('feedbackThemesOut').innerHTML = (d.feedbackThemes || []).map(t => `
+      <div style="margin-bottom:8px;padding:8px;background:var(--surface3);border-radius:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">${safeStr(t.theme)}</span>
+          <span class="status-pill" style="font-size:9px;padding:2px 6px;background:${t.priority==='P0'?'rgba(248,113,113,0.15)':t.priority==='P1'?'rgba(251,191,36,0.15)':'rgba(52,211,153,0.12)'};color:${t.priority==='P0'?'var(--red)':t.priority==='P1'?'var(--amber)':'var(--green)'};">${safeStr(t.priority)}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);">${safeStr(t.pmNote)}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">No feedback provided.</div>';
+
+    const j = d.jtbd || {};
+    document.getElementById('jtbdOut').innerHTML = `
+      <div style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--accent);margin-bottom:6px;text-transform:uppercase;">Primary Job Statement</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:17px;color:var(--text);line-height:1.5;">${safeStr(j.primaryJob)}</div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Hypothesis</div>
+      <div style="font-size:12px;color:var(--text2);padding:10px 14px;background:rgba(124,106,247,0.07);border:1px solid rgba(124,106,247,0.2);border-radius:6px;margin-bottom:14px;">${safeStr(d.suggestedHypothesis)}</div>
+      <div class="grid grid-cols-3 gap-3">
+        ${[['Functional Jobs','functionalJobs','var(--teal)'],['Emotional Jobs','emotionalJobs','var(--amber)'],['Social Jobs','socialJobs','var(--accent)']].map(([label,key,color]) => `
+          <div style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:12px;">
+            <div style="font-size:9px;font-family:'DM Mono',monospace;color:${color};letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">${label}</div>
+            ${(j[key]||[]).map(item => `<div style="font-size:11px;color:var(--text2);margin-bottom:5px;display:flex;gap:6px;"><span style="color:${color};flex-shrink:0;">·</span>${safeStr(item)}</div>`).join('')}
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:14px;">
+        <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Job Stories</div>
+        <div class="grid grid-cols-3 gap-3">
+          ${(j.jobStories||[]).map(s => `
+            <div style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:12px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;">Pain: </span>
+                <span style="font-size:9px;font-family:'DM Mono',monospace;color:${s.painLevel==='High'?'var(--red)':s.painLevel==='Medium'?'var(--amber)':'var(--green)'};">${safeStr(s.painLevel)}</span>
+              </div>
+              <div style="font-size:11px;color:var(--muted2);margin-bottom:4px;"><span style="color:var(--text2);font-weight:600;">When</span> ${safeStr(s.situation?.replace(/^when\s*/i,''))}</div>
+              <div style="font-size:11px;color:var(--muted2);margin-bottom:4px;"><span style="color:var(--text2);font-weight:600;">I want</span> ${safeStr(s.motivation?.replace(/^i want to\s*/i,''))}</div>
+              <div style="font-size:11px;color:var(--muted2);margin-bottom:8px;"><span style="color:var(--text2);font-weight:600;">So I can</span> ${safeStr(s.outcome?.replace(/^so i can\s*/i,''))}</div>
+              <div style="font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;">Today: ${safeStr(s.currentSolution)}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+
+    document.getElementById('discoveryResults').classList.remove('hidden');
+    setStatus('discoveryStatus', 'discoveryStatusText', '', false);
+
+  } catch (e) {
+    setStatus('discoveryStatus', 'discoveryStatusText', '❌ ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
+
+// ══════════════════════════════════════════════
+// STAGE 2: PRD
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// STAGE 2: PRD
+// ══════════════════════════════════════════════
+async function generatePRD() {
+  if (!cachedDiscovery) { alert('Run Stage 1 Discovery first.'); return; }
+  const btn = document.getElementById('prdBtn');
+  const setS = (msg) => setStatus('prdStatus', 'prdStatusText', msg, true);
+  
+  clearDownstreamState(2);
+  btn.disabled = true;
+  document.getElementById('prdPlaceholder').classList.add('hidden');
+
+  try {
+    const d = cachedDiscovery;
+    
+    // UPDATED PROMPT: Forces the AI to wrap all Mermaid text in double quotes
+    const prompt = `You are a Senior Group PM. Write a comprehensive PRD.
+PRODUCT: "${d.prodName}" | SCOPE: ${d.scope} | PERSONAS: ${d.personas}
+CONTEXT: ${d.context || 'None.'}
+DISCOVERY FINDINGS:
+- JTBD Primary Job: ${d.jtbd?.primaryJob || 'N/A'}
+- Competitive Gaps: ${(d.competitiveGaps||[]).join(', ')}
+- Top Feedback: ${d.feedbackCtx || 'None.'}
+- Wireframe Context: ${d.visionCtx || 'None.'}
+- OKR Alignment: ${(d.okrAlignment||[]).map(o => o.okr + ' (' + o.contribution + ')').join('; ')}
+- Hypothesis: ${d.suggestedHypothesis || 'N/A'}
+
+Generate a Mermaid flowchart as a SINGLE LINE string using \\n for line breaks. Use flowchart TD.
+IMPORTANT: ALWAYS wrap node labels in double quotes. No markdown backticks.
+
+Return ONLY valid JSON:
+{
+  "execSummary": "3 paragraphs — what, why, measurable success criteria",
+  "problemStatement": "2 paragraphs framing the user pain and market gap",
+  "outOfScope": "markdown bullet list of anti-goals",
+  "personas": [{"name":"name","description":"2 sentences","primaryGoal":"what they want to achieve","frustration":"current pain"}],
+  "okrMapping": [{"okr":"OKR text","keyResults":["specific KR this feature moves"],"successMetric":"measurable target"}],
   "stories": [
-    {"role": "e.g. SOC Analyst", "action": "e.g. click the summarize button", "value": "e.g. save time reading logs", "ac": ["AC 1", "AC 2"], "effort": "S, M, L, or XL"}
+    {"role":"persona","action":"what they do","value":"why it matters","ac":["AC1","AC2"],"effort":"S|M|L|XL","priority":"P0|P1|P2"}
   ],
-  "mermaidFlowchart": "flowchart TD\\n  A[User] -->|Clicks| B(UI)\\n  B --> C{Backend}"
+  "mermaidFlowchart": "flowchart TD\\n  A[\\"User\\"] --> B{\\"Decision\\"}\\n  B -->|Yes| C[\\"Action\\"]\\n  B -->|No| D[\\"Alternative\\"]",
+  "successMetrics": [{"metric":"metric name","baseline":"current","target":"goal","timeframe":"when"}],
+  "nonFunctionalRequirements": ["performance requirement","security requirement"]
 }`;
 
-            try {
-                const result = await fetchWithRetry(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-                    { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: {temperature: 0.3, maxOutputTokens: 8192} }) },
-                    4, 15000, (msg) => { btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px"><span class="loader"></span> ${msg}</span>`; }
-                );
+    const prd = await apiCall(prompt, setS);
+    cachedPRD = { ...prd, prodName: d.prodName };
 
-                const prd = extractJSON(result.candidates[0].content.parts[0].text);
-                cachedGtmData = prd; // Save for the deck generation
+    document.getElementById('outExecSummary').innerHTML = md(prd.execSummary);
+    document.getElementById('outProblem').innerHTML = md(prd.problemStatement);
+    document.getElementById('outPersonas').innerHTML = (prd.personas || []).map(p => `
+      <div style="padding:10px;margin-bottom:8px;background:var(--surface3);border-radius:6px;border:1px solid var(--border);">
+        <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:4px;">${safeStr(p.name)}</div>
+        <div style="font-size:12px;color:var(--muted2);margin-bottom:6px;">${safeStr(p.description)}</div>
+        <div style="font-size:11px;color:var(--teal);">Goal: ${safeStr(p.primaryGoal)}</div>
+        <div style="font-size:11px;color:var(--red);">Pain: ${safeStr(p.frustration)}</div>
+      </div>`).join('');
+    document.getElementById('outOfScope').innerHTML = md(prd.outOfScope);
 
-                // Render
-                document.getElementById('reportSection').classList.remove('hidden');
-                document.getElementById('outFeatureName').innerText = prodName;
-                document.getElementById('coverFeature').innerText = prodName;
-                document.getElementById('outScope').innerText = scope;
-                
-                // Defensive markdown parser to handle AI sometimes returning arrays instead of strings
-                const safeMd = (val) => {
-                    if (!val) return '';
-                    if (Array.isArray(val)) return marked.parse(val.map(v => String(v).startsWith('-') ? v : '- ' + v).join('\n'));
-                    return marked.parse(String(val));
-                };
+    const tbody = document.getElementById('outStoriesBody');
+    tbody.innerHTML = '';
+    (prd.stories || []).forEach(s => {
+      const acHtml = `<ul style="list-style:disc;padding-left:14px;font-size:11px;">${(s.ac||[]).map(a => `<li style="margin-bottom:3px;">${safeStr(a)}</li>`).join('')}</ul>`;
+      const effortColor = {S:'var(--green)',M:'var(--amber)',L:'var(--red)',XL:'#f43f5e'}[s.effort] || 'var(--muted)';
+      const prioColor = {P0:'var(--red)',P1:'var(--amber)',P2:'var(--green)'}[s.priority] || 'var(--muted)';
+      tbody.innerHTML += `<tr>
+        <td style="font-weight:600;color:var(--text2);">${safeStr(s.role)}</td>
+        <td style="color:var(--text2);">${safeStr(s.action)}</td>
+        <td style="color:var(--muted2);font-style:italic;">${safeStr(s.value)}</td>
+        <td>${acHtml}</td>
+        <td style="text-align:center;">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;background:${effortColor}20;color:${effortColor};">${safeStr(s.effort)}</span>
+          <div style="margin-top:3px;"><span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 5px;border-radius:3px;background:${prioColor}20;color:${prioColor};">${safeStr(s.priority)}</span></div>
+        </td>
+      </tr>`;
+    });
 
-                document.getElementById('outExecSummary').innerHTML = safeMd(prd.execSummary);
-                document.getElementById('outProblem').innerHTML = safeMd(prd.problemStatement);
-                document.getElementById('outPersonas').innerHTML = personas;
-                document.getElementById('outOfScope').innerHTML = safeMd(prd.outOfScope);
+    document.getElementById('okrMappingDetail').innerHTML = `
+      <div class="grid grid-cols-2 gap-3">
+        ${(prd.okrMapping || []).map(o => `
+          <div style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:12px;">
+            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">${safeStr(o.okr)}</div>
+            <div style="margin-bottom:6px;">${(o.keyResults||[]).map(kr => `<div style="font-size:11px;color:var(--teal);display:flex;gap:6px;"><span>→</span>${safeStr(kr)}</div>`).join('')}</div>
+            <div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;">Target: ${safeStr(o.successMetric)}</div>
+          </div>`).join('')}
+      </div>`;
 
-                // Stories
-                const tbody = document.getElementById('outStoriesBody');
-                tbody.innerHTML = '';
-                prd.stories.forEach(s => {
-                    let acHtml = "<ul class='list-disc pl-4 text-xs space-y-1'>";
-                    s.ac.forEach(a => acHtml += `<li>${a}</li>`); acHtml += "</ul>";
-                    const row = `<tr>
-                        <td class="font-bold text-slate-800">${s.role}</td>
-                        <td class="text-slate-700">${s.action}</td>
-                        <td class="text-slate-700 italic">${s.value}</td>
-                        <td>${acHtml}</td>
-                        <td class="text-center"><span class="tshirt-${s.effort}">${s.effort}</span></td>
-                    </tr>`;
-                    tbody.innerHTML += row;
-                });
+    // UPDATED MERMAID LOGIC: Removed the buggy regex entirely
+    const mc = document.getElementById('mermaidContainer');
+    mc.innerHTML = ''; 
 
-                // Mermaid
-                const mc = document.getElementById('mermaidContainer');
-                mc.innerHTML = '';
-                if (prd.mermaidFlowchart) {
-                    currentDiagramCode = prd.mermaidFlowchart;
-                    document.getElementById('rawDiagramCode').textContent = prd.mermaidFlowchart;
-                    try {
-                        mermaid.initialize({ startOnLoad: false, theme: 'base' });
-                        const { svg } = await mermaid.render('mermaid_' + Date.now(), prd.mermaidFlowchart);
-                        mc.innerHTML = svg;
-                    } catch (me) {
-                        mc.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded text-xs">Diagram Error: ${me.message}</div>`;
-                    }
-                }
+    if (prd.mermaidFlowchart) {
+      // 1. Basic sanitization
+      let cleanCode = prd.mermaidFlowchart
+        .replace(/^```mermaid\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .replace(/\\n/g, '\n')
+        .trim();
 
-                document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+      // 2. Add missing preamble
+      if (!cleanCode.startsWith('flowchart') && !cleanCode.startsWith('graph')) {
+        cleanCode = 'flowchart TD\n' + cleanCode;
+      }
 
-            } catch (e) {
-                alert("Generation Error: " + e.message); console.error(e);
-            } finally { btn.disabled = false; btn.innerHTML = "4. Generate PRD & Flowchart"; }
-        }
+      document.getElementById('rawDiagramCode').textContent = cleanCode;
 
+      try {
+        const uniqueId = 'mmd_' + Math.floor(Math.random() * 10000);
+        const { svg } = await mermaid.render(uniqueId, cleanCode);
+        mc.innerHTML = DOMPurify.sanitize(svg);
+        resetZoom();
+      } catch (me) {
+        mc.innerHTML = `<div style="color:var(--red);font-size:12px;padding:20px;background:var(--surface3);border-radius:8px;">
+          <strong>Diagram Syntax Error:</strong><br>${safeStr(me.message)}
+        </div>`;
+      }
+    }
 
-        // ══════════════════════════════════════════════════════════════
-        // GTM DECK GENERATOR
-        // ══════════════════════════════════════════════════════════════
-        
-        function pptxSetStatus(msg) {
-            const el = document.getElementById('deckStatus'); const l = el.querySelector('.loader');
-            el.classList.remove('hidden'); el.style.color = ''; if(l) l.style.display = 'inline-block';
-            document.getElementById('deckStatusText').innerText = msg;
-        }
+    document.getElementById('prdOutput').classList.remove('hidden');
+    setStatus('prdStatus', 'prdStatusText', '', false);
+    document.getElementById('prdOutput').scrollIntoView({ behavior: 'smooth' });
 
-        function pptxHeader(pres, slide, title, sub, PP) {
-            slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 1.1, fill: { color: PP.dark } });
-            slide.addText(title, { x: 0.4, y: 0.08, w: 9.2, h: 0.55, fontSize: 24, bold: true, color: PP.white, fontFace: 'Calibri', margin: 0 });
-            if (sub) slide.addText(sub, { x: 0.4, y: 0.65, w: 9.2, h: 0.35, fontSize: 11, color: PP.slateC, fontFace: 'Calibri', margin: 0 });
-            slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.06, h: 1.1, fill: { color: PP.accent } });
-        }
+  } catch (e) {
+    setStatus('prdStatus', 'prdStatusText', '❌ ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
 
-        function pptxFooter(pres, slide, feature, page, total, PP) {
-            slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.3, w: 10, h: 0.32, fill: { color: PP.slateD } });
-            slide.addText(`${feature} - Internal GTM Alignment`, { x: 0.3, y: 5.33, w: 6, h: 0.24, fontSize: 8, color: PP.muted, fontFace: 'Calibri', margin: 0 });
-            slide.addText(`${page} / ${total}`, { x: 9.0, y: 5.33, w: 0.7, h: 0.24, fontSize: 8, color: PP.muted, fontFace: 'Calibri', align: 'right', margin: 0 });
-        }
+let diagramZoom = 1;
+function zoomDiagram(f) { diagramZoom = Math.min(Math.max(diagramZoom * f, 0.3), 4); const s = document.querySelector('#mermaidContainer svg'); if (s) s.style.transform = `scale(${diagramZoom})`; }
+function resetZoom() { diagramZoom = 1; const s = document.querySelector('#mermaidContainer svg'); if (s) s.style.transform = 'scale(1)'; }
+function toggleRawCode() { const b = document.getElementById('rawDiagramCode'); b.style.display = b.style.display === 'block' ? 'none' : 'block'; }
 
-        function printTechnicalReport() {
-            document.body.classList.add('print-report'); document.body.classList.remove('print-proposal'); window.print();
-        }
-        function printProposalPDF() {
-            document.body.classList.add('print-proposal'); document.body.classList.remove('print-report'); window.print();
-        }
+// ══════════════════════════════════════════════
+// STAGE 3: SIZING
+// ══════════════════════════════════════════════
+async function generateSizing() {
+  if (!cachedPRD) { alert('Generate the PRD in Stage 2 first.'); return; }
+  const btn = document.getElementById('sizingBtn');
+  const setS = (msg) => setStatus('sizingStatus', 'sizingStatusText', msg, true);
+  
+  clearDownstreamState(3);
+  btn.disabled = true;
+  document.getElementById('sizingPlaceholder').classList.add('hidden');
 
-        async function generateGTMDeck() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelSelector').value;
-            const btn = document.getElementById('deckBtn');
-            if (!apiKey || !cachedGtmData) return alert('Please generate the PRD (Step 4) first!');
+  try {
+    const d = cachedPRD;
+    const stories = (d.stories || []).slice(0, 8).map((s, i) => `${i+1}. [${s.priority||'P1'}] ${s.action} (persona: ${s.role})`).join('\n');
 
-            const prodName = document.getElementById('productName').value || "New Feature";
-            const author = document.getElementById('deckAuthor').value || "Product Team";
-            const pHex = document.getElementById('themePrimary').value.replace('#','').toUpperCase();
-            const aHex = document.getElementById('themeAccent').value.replace('#','').toUpperCase();
+    const prompt = `You are a Senior Engineering Program Manager performing sizing and risk analysis for:
+FEATURE: "${d.prodName}"
+USER STORIES:
+${stories}
 
-            const PP = { dark: '0F172A', primary: pHex, accent: aHex, light: 'F8FAFC', white: 'FFFFFF', muted: '64748B', slate2: '1E293B', slateC: '94A3B8', slateD: 'E2E8F0', green: '16A34A' };
-
-            btn.disabled = true; document.getElementById('printPdfBtn').classList.add('hidden');
-            pptxSetStatus('Step 1/3 — Structuring GTM narrative...');
-
-            const prompt = `You are a Group Product Manager. Create an internal GTM Alignment Deck for "${prodName}".
-Based on this PRD context: ${JSON.stringify(cachedGtmData).substring(0, 3000)}
-
-Output ONLY valid JSON:
+Return ONLY valid JSON:
 {
-  "theWhy": {"title": "The Market Problem", "points": ["..."]},
-  "theWhat": {"title": "The Solution", "points": ["..."]},
-  "personas": [ {"name": "...", "pain": "...", "win": "..."} ], // exactly 3
-  "pricing": {"strategy": "e.g. Included in Base vs Paid Add-on", "rationale": "..."},
-  "sales": {"valueProp": "1 sentence elevator pitch", "objections": [ {"obj": "...", "rebuttal": "..."} ]}, // 3 objections
-  "roadmap": [{"phase": "Beta", "date": "Q3", "goal": "..."}, {"phase": "GA", "date": "Q4", "goal": "..."}]
+  "riceScores": [
+    {"feature":"story name","reach":1000,"impact":3,"confidence":80,"effortWeeks":4,"riceScore":600,"priority":"Must Have|Should Have|Nice to Have","rationale":"brief reason"}
+  ],
+  "effortBreakdown": {
+    "frontend": "e.g. 3–4 weeks — list tasks",
+    "backend": "e.g. 5–6 weeks — list tasks",
+    "infrastructure": "e.g. 1–2 weeks — list tasks",
+    "qa": "e.g. 2 weeks — testing required",
+    "totalEstimate": "e.g. 10–14 weeks total",
+    "teamSize": "e.g. 2 FE + 3 BE + 1 QA + 1 DevOps"
+  },
+  "dependencies": [{"dependency":"name","type":"Internal|External|Technical","blocksStory":"story name","mitigationPath":"how to unblock"}],
+  "risks": [
+    {"risk":"description","category":"Technical|Business|Legal|Data","likelihood":"High|Medium|Low","impact":"High|Medium|Low","mitigation":"plan","owner":"Engineering|PM|Legal"}
+  ],
+  "tickets": [
+    {"id":"FEAT-001","type":"Epic|Story|Task|Bug","title":"ticket title","description":"as a [role], I want [action] so that [value]","acceptanceCriteria":["AC1"],"storyPoints":5,"labels":["frontend"],"sprint":"Sprint 1","dependsOn":[]}
+  ]
 }`;
 
-            try {
-                const res = await fetchWithRetry(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-                    { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: {temperature: 0.4} }) },
-                    3, 10000, (msg) => pptxSetStatus(msg)
-                );
-                
-                const deckData = extractJSON(res.candidates[0].content.parts[0].text);
-                pptxSetStatus('Step 2/3 — Rendering slides...');
+    const sz = await apiCall(prompt, setS);
+    cachedSizing = { ...sz, prodName: d.prodName };
+    jiraTickets = sz.tickets || [];
 
-                const pres = new PptxGenJS(); pres.layout = 'LAYOUT_16x9'; pres.author = author;
-                const TODAY = new Date().toLocaleDateString('en-GB');
-                
-                // Selections
-                const cWhy = document.getElementById('chkSlideWhy').checked;
-                const cWhat = document.getElementById('chkSlideWhat').checked;
-                const cPer = document.getElementById('chkSlidePersonas').checked;
-                const cPri = document.getElementById('chkSlidePricing').checked;
-                const cSal = document.getElementById('chkSlideSales').checked;
-                const cRod = document.getElementById('chkSlideRoadmap').checked;
+    const riceBody = document.getElementById('riceBody');
+    riceBody.innerHTML = '';
+    (sz.riceScores || []).forEach(r => {
+      const score = r.riceScore || Math.round((r.reach * r.impact * (r.confidence / 100)) / r.effortWeeks);
+      const prioColor = r.priority === 'Must Have' ? 'var(--green)' : r.priority === 'Should Have' ? 'var(--amber)' : 'var(--muted)';
+      riceBody.innerHTML += `<tr>
+        <td style="color:var(--text2);font-size:12px;">${safeStr(r.feature)}</td>
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${safeStr(r.reach?.toLocaleString())}</td>
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${safeStr(r.impact)}</td>
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${safeStr(r.confidence)}%</td>
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);">${safeStr(r.effortWeeks)}w</td>
+        <td style="text-align:center;"><span class="score-badge" style="background:rgba(124,106,247,0.15);color:var(--accent);">${safeStr(score.toLocaleString())}</span></td>
+        <td><span style="font-size:11px;font-weight:600;color:${prioColor};">${safeStr(r.priority)}</span></td>
+      </tr>`;
+    });
 
-                let totalSlides = 1 + [cWhy, cWhat, cPer, cPri, cSal, cRod].filter(Boolean).length;
-                let cur = 1;
+    const eb = sz.effortBreakdown || {};
+    document.getElementById('effortOut').innerHTML = `
+      ${['frontend','backend','infrastructure','qa'].map(k => `<div style="margin-bottom:8px;"><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);text-transform:uppercase;">${k}: </span><span style="font-size:12px;color:var(--text2);">${safeStr(eb[k]) || 'TBD'}</span></div>`).join('')}
+      <div style="padding:10px;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:6px;margin-top:10px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);">TOTAL ESTIMATE</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);">${safeStr(eb.totalEstimate) || 'TBD'}</div>
+        <div style="font-size:11px;color:var(--muted2);">${safeStr(eb.teamSize) || ''}</div>
+      </div>`;
 
-                // 1. TITLE
-                const s1 = pres.addSlide(); s1.background = { color: PP.dark };
-                s1.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 3.8, h: 5.625, fill: { color: PP.primary } });
-                if (companyLogoBase64) s1.addImage({ data: companyLogoBase64, x: 0.4, y: 0.5, w: 2.5, h: 1.0, sizing: { type: 'contain' } });
-                s1.addText(prodName, { x: 4.1, y: 1.5, w: 5.6, h: 1.0, fontSize: 42, bold: true, color: PP.accent, fontFace: 'Calibri', margin: 0 });
-                s1.addText('GTM Alignment & Strategy', { x: 4.1, y: 2.5, w: 5.6, h: 0.5, fontSize: 24, color: PP.white, fontFace: 'Calibri', margin: 0 });
-                s1.addText(`Prepared by: ${author}`, { x: 4.1, y: 3.5, w: 5.6, h: 0.3, fontSize: 12, color: PP.slateC, fontFace: 'Calibri', margin: 0 });
-                s1.addText(`Date: ${TODAY}`, { x: 4.1, y: 3.8, w: 5.6, h: 0.3, fontSize: 12, color: PP.slateC, fontFace: 'Calibri', margin: 0 });
+    document.getElementById('dependenciesOut').innerHTML = (sz.dependencies || []).map(d => `
+      <div style="padding:8px;margin-bottom:6px;background:var(--surface3);border-radius:4px;border-left:3px solid ${d.type==='External'?'var(--red)':d.type==='Technical'?'var(--amber)':'var(--teal)'};">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);">${safeStr(d.dependency)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${safeStr(d.type)} · Blocks: ${safeStr(d.blocksStory)}</div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:4px;">${safeStr(d.mitigationPath)}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">No critical dependencies identified.</div>';
 
-                // 2. THE WHY
-                if (cWhy) {
-                    const s = pres.addSlide(); s.background = { color: PP.light };
-                    pptxHeader(pres, s, 'The Why', deckData.theWhy.title, PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
-                    deckData.theWhy.points.forEach((pt, i) => {
-                        s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.5 + (i*0.8), w: 0.1, h: 0.5, fill: {color: PP.accent} });
-                        s.addText(pt, { x: 0.8, y: 1.5 + (i*0.8), w: 8.5, h: 0.5, fontSize: 14, color: PP.slate2, fontFace: 'Calibri' });
-                    });
-                }
+    const riskBody = document.getElementById('riskBody');
+    riskBody.innerHTML = '';
+    const riskColor = v => v === 'High' ? 'var(--red)' : v === 'Medium' ? 'var(--amber)' : 'var(--green)';
+    (sz.risks || []).forEach(r => {
+      riskBody.innerHTML += `<tr>
+        <td style="color:var(--text2);font-size:12px;"><span style="font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;">${safeStr(r.category)}</span><br>${safeStr(r.risk)}</td>
+        <td style="text-align:center;"><span style="font-size:11px;font-weight:600;color:${riskColor(r.likelihood)};">${safeStr(r.likelihood)}</span></td>
+        <td style="text-align:center;"><span style="font-size:11px;font-weight:600;color:${riskColor(r.impact)};">${safeStr(r.impact)}</span></td>
+        <td style="font-size:11px;color:var(--muted2);">${safeStr(r.mitigation)}</td>
+        <td style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);">${safeStr(r.owner)}</td>
+      </tr>`;
+    });
 
-                // 3. THE WHAT
-                if (cWhat) {
-                    const s = pres.addSlide(); s.background = { color: PP.light };
-                    pptxHeader(pres, s, 'The Solution', deckData.theWhat.title, PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
-                    deckData.theWhat.points.forEach((pt, i) => {
-                        s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.5 + (i*0.8), w: 0.1, h: 0.5, fill: {color: PP.primary} });
-                        s.addText(pt, { x: 0.8, y: 1.5 + (i*0.8), w: 8.5, h: 0.5, fontSize: 14, color: PP.slate2, fontFace: 'Calibri' });
-                    });
-                }
+    const ticketsOut = document.getElementById('ticketsOut');
+    ticketsOut.innerHTML = (jiraTickets || []).map(t => `
+      <div class="jira-ticket">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span class="ticket-id">${safeStr(t.id)}</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:3px;font-family:'DM Mono',monospace;font-weight:600;background:${t.type==='Epic'?'rgba(124,106,247,0.15)':t.type==='Story'?'rgba(34,211,238,0.12)':'rgba(107,107,130,0.15)'};color:${t.type==='Epic'?'var(--accent)':t.type==='Story'?'var(--teal)':'var(--muted2)'};">${safeStr(t.type)}</span>
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);">SP: ${safeStr(t.storyPoints)}</span>
+          <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted2);">${safeStr(t.sprint || '')}</span>
+          <div style="flex:1;text-align:right;">${(t.labels||[]).map(l => `<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:var(--surface3);color:var(--muted);font-family:'DM Mono',monospace;margin-left:3px;">${safeStr(l)}</span>`).join('')}</div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">${safeStr(t.title)}</div>
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:8px;">${safeStr(t.description)}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:4px;">Acceptance Criteria</div>
+        ${(t.acceptanceCriteria||[]).map(ac => `<div style="font-size:11px;color:var(--text2);display:flex;gap:6px;margin-bottom:3px;"><span style="color:var(--green);">✓</span>${safeStr(ac)}</div>`).join('')}
+      </div>`).join('');
 
-                // 4. PERSONAS
-                if (cPer) {
-                    const s = pres.addSlide(); s.background = { color: PP.light };
-                    pptxHeader(pres, s, 'Target Personas', 'Who are we building this for?', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
-                    deckData.personas.slice(0,3).forEach((p, i) => {
-                        const cx = 0.5 + (i*3.1);
-                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.5, w: 2.8, h: 3.0, fill: {color: PP.white}, line: {color: PP.slateD} });
-                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.5, w: 2.8, h: 0.4, fill: {color: PP.primary} });
-                        s.addText(p.name, { x: cx, y: 1.55, w: 2.8, h: 0.3, fontSize: 14, bold: true, color: PP.white, align: 'center' });
-                        s.addText('Pain:', { x: cx+0.2, y: 2.1, w: 2.4, h: 0.2, fontSize: 10, bold: true, color: PP.accent });
-                        s.addText(p.pain, { x: cx+0.2, y: 2.3, w: 2.4, h: 0.8, fontSize: 11, color: PP.slate2, valign: 'top' });
-                        s.addText('Win:', { x: cx+0.2, y: 3.2, w: 2.4, h: 0.2, fontSize: 10, bold: true, color: PP.green });
-                        s.addText(p.win, { x: cx+0.2, y: 3.4, w: 2.4, h: 0.8, fontSize: 11, color: PP.slate2, valign: 'top' });
-                    });
-                }
+    document.getElementById('sizingOutput').classList.remove('hidden');
+    setStatus('sizingStatus', 'sizingStatusText', '', false);
 
-                // 5. PRICING
-                if (cPri) {
-                    const s = pres.addSlide(); s.background = { color: PP.light };
-                    pptxHeader(pres, s, 'Pricing & Packaging Strategy', 'Commercial impact of this release', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
-                    s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.5, w: 9, h: 1.0, fill: {color: PP.primary} });
-                    s.addText('STRATEGY', { x: 0.7, y: 1.6, w: 8.6, h: 0.3, fontSize: 10, color: PP.slateC, bold: true });
-                    s.addText(deckData.pricing.strategy, { x: 0.7, y: 1.9, w: 8.6, h: 0.5, fontSize: 20, color: PP.white, bold: true });
-                    s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 2.8, w: 9, h: 1.5, fill: {color: PP.white}, line: {color: PP.slateD} });
-                    s.addText('RATIONALE', { x: 0.7, y: 3.0, w: 8.6, h: 0.3, fontSize: 10, color: PP.muted, bold: true });
-                    s.addText(deckData.pricing.rationale, { x: 0.7, y: 3.3, w: 8.6, h: 0.8, fontSize: 14, color: PP.slate2, valign: 'top' });
-                }
+  } catch (e) {
+    setStatus('sizingStatus', 'sizingStatusText', '❌ ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
 
-                // 6. SALES
-                if (cSal) {
-                    const s = pres.addSlide(); s.background = { color: PP.light };
-                    pptxHeader(pres, s, 'Sales Enablement', 'Pitch & Objection Handling', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
-                    s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.3, w: 9, h: 0.8, fill: {color: PP.accent, transparency: 80} });
-                    s.addText(`Elevator Pitch: ${deckData.sales.valueProp}`, { x: 0.7, y: 1.45, w: 8.6, h: 0.5, fontSize: 14, bold: true, color: PP.dark, italic: true });
-                    deckData.sales.objections.slice(0,3).forEach((obj, i) => {
-                        const y = 2.4 + (i*0.9);
-                        s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: y, w: 0.4, h: 0.7, fill: {color: PP.primary} });
-                        s.addText('Q', { x: 0.5, y: y, w: 0.4, h: 0.35, fontSize: 12, color: PP.white, bold: true, align: 'center' });
-                        s.addText('A', { x: 0.5, y: y+0.35, w: 0.4, h: 0.35, fontSize: 12, color: PP.accent, bold: true, align: 'center', fill: {color: PP.dark} });
-                        s.addText(obj.obj, { x: 1.0, y: y, w: 8.5, h: 0.35, fontSize: 11, bold: true, color: PP.slate2 });
-                        s.addText(obj.rebuttal, { x: 1.0, y: y+0.35, w: 8.5, h: 0.35, fontSize: 11, color: PP.muted });
-                    });
-                }
+function exportJiraCSV() {
+  if (!jiraTickets.length) { alert('No tickets to export.'); return; }
+  // Use PapaParse to generate safe CSV string
+  const rows = jiraTickets.map(t => ({
+    "Issue ID": t.id,
+    "Type": t.type,
+    "Summary": t.title,
+    "Description": t.description,
+    "Story Points": t.storyPoints,
+    "Labels": (t.labels||[]).join(', '),
+    "Sprint": t.sprint || '',
+    "Acceptance Criteria": (t.acceptanceCriteria||[]).join(' | ')
+  }));
+  const csv = Papa.unparse(rows);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `Jira_Tickets_${(cachedPRD?.prodName || 'Feature').replace(/\s+/g,'_')}.csv`;
+  a.click();
+}
 
-                // 7. ROADMAP
-                if (cRod) {
-                    const s = pres.addSlide(); s.background = { color: PP.light };
-                    pptxHeader(pres, s, 'Implementation Roadmap', 'Delivery phases', PP); pptxFooter(pres, s, prodName, ++cur, totalSlides, PP);
-                    deckData.roadmap.slice(0,3).forEach((rm, i) => {
-                        const cx = 0.5 + (i*3.1);
-                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.8, w: 2.8, h: 2.5, fill: {color: PP.white}, line: {color: PP.slateD} });
-                        s.addShape(pres.shapes.RECTANGLE, { x: cx, y: 1.8, w: 2.8, h: 0.5, fill: {color: PP.dark} });
-                        s.addText(rm.phase, { x: cx, y: 1.9, w: 2.8, h: 0.3, fontSize: 14, bold: true, color: PP.white, align: 'center' });
-                        s.addText(rm.date, { x: cx, y: 2.5, w: 2.8, h: 0.4, fontSize: 20, bold: true, color: PP.accent, align: 'center' });
-                        s.addText(rm.goal, { x: cx+0.2, y: 3.1, w: 2.4, h: 1.0, fontSize: 12, color: PP.slate2, align: 'center', valign: 'top' });
-                    });
-                }
+// ══════════════════════════════════════════════
+// STAGE 4: SIGNOFF
+// ══════════════════════════════════════════════
+async function generateSignoffPackage() {
+  if (!cachedPRD || !cachedSizing) { alert('Complete Stages 1–3 first.'); return; }
+  const btn = document.getElementById('signoffBtn');
+  const setS = (msg) => setStatus('signoffStatus', 'signoffStatusText', msg, true);
+  btn.disabled = true;
+  document.getElementById('signoffPlaceholder').classList.add('hidden');
 
-                pptxSetStatus('Step 3/3 — Saving files...');
-                
-                // ── HTML PDF RENDER ──
-                document.getElementById('pdfFeatureLabel').innerText = prodName;
-                document.getElementById('pdfAuthorLabel').innerText = author;
-                document.getElementById('pdfCoverBanner').style.borderColor = `#${pHex}`;
-                document.getElementById('pdfCompanySubtitle').style.color = `#${pHex}`;
+  try {
+    const d = cachedPRD;
+    const sz = cachedSizing;
 
-                const pdfContainer = document.getElementById('pdfContentContainer');
-                pdfContainer.innerHTML = '';
-                const addSec = (title, html) => {
-                    pdfContainer.innerHTML += `<div class="page-break-inside-avoid mb-10"><h3 class="text-2xl font-bold text-slate-800 border-b-2 pb-2 mb-4 flex items-center gap-3" style="border-color: #${pHex}40;"><span class="w-3 h-8 inline-block rounded" style="background-color: #${pHex}"></span> ${title}</h3><div class="text-gray-700 leading-relaxed">${html}</div></div>`;
-                };
+    setS('Generating stakeholder views...');
 
-                if(cWhy) {
-                    let h = `<ul class="list-disc pl-6 space-y-2">`; deckData.theWhy.points.forEach(p=> h+=`<li>${p}</li>`); h+=`</ul>`;
-                    addSec('The Market Problem', h);
-                }
-                if(cWhat) {
-                    let h = `<ul class="list-disc pl-6 space-y-2">`; deckData.theWhat.points.forEach(p=> h+=`<li>${p}</li>`); h+=`</ul>`;
-                    addSec('The Proposed Solution', h);
-                }
-                if(cPer) {
-                    let h = `<div class="grid grid-cols-2 gap-4">`;
-                    deckData.personas.forEach(p=> h+=`<div class="border p-4 rounded bg-slate-50 border-slate-200"><h4 class="font-bold text-lg mb-2" style="color:#${pHex}">${p.name}</h4><p class="text-sm mb-2"><strong>Pain:</strong> ${p.pain}</p><p class="text-sm"><strong>Win:</strong> ${p.win}</p></div>`);
-                    h+=`</div>`; addSec('Target Personas', h);
-                }
-                if(cPri) {
-                    addSec('Pricing & Packaging', `<div class="p-4 rounded border" style="background:#${pHex}10; border-color:#${pHex}40"><h4 class="font-bold text-xl mb-2" style="color:#${pHex}">${deckData.pricing.strategy}</h4><p>${deckData.pricing.rationale}</p></div>`);
-                }
-                if(cSal) {
-                    let h = `<p class="italic font-bold text-lg mb-4" style="color:#${aHex}">"${deckData.sales.valueProp}"</p><div class="space-y-4">`;
-                    deckData.sales.objections.forEach(o=> h+=`<div class="border-l-4 pl-4 py-1" style="border-color:#${pHex}"><p class="font-bold text-sm text-slate-800">Q: ${o.obj}</p><p class="text-sm text-gray-600">A: ${o.rebuttal}</p></div>`);
-                    h+=`</div>`; addSec('Sales Enablement & Objections', h);
-                }
-                if(cRod) {
-                    let h = `<div class="flex gap-4">`;
-                    deckData.roadmap.forEach(r=> h+=`<div class="flex-1 border p-4 rounded bg-slate-50"><h4 class="font-bold text-lg" style="color:#${pHex}">${r.phase}</h4><p class="text-xs font-bold text-gray-400 mb-2">${r.date}</p><p class="text-sm">${r.goal}</p></div>`);
-                    h+=`</div>`; addSec('Implementation Roadmap', h);
-                }
+    const prompt = `You are a senior PM generating stakeholder documents for "${d.prodName}".
+PRD SUMMARY: ${d.execSummary?.substring(0,500) || ''}
+TOTAL ESTIMATE: ${sz.effortBreakdown?.totalEstimate || 'TBD'}
+RICE TOP FEATURE: ${sz.riceScores?.[0]?.feature || ''} (score: ${sz.riceScores?.[0]?.riceScore || ''})
+RISKS: ${(sz.risks||[]).slice(0,3).map(r => r.risk + ' (' + r.likelihood + ' likelihood)').join('; ')}
+SUCCESS METRICS: ${(d.successMetrics||[]).map(m => m.metric + ': ' + m.target).join('; ')}
+OKR ALIGNMENT: ${(d.okrMapping||[]).map(o => o.okr).join('; ')}
 
-                await pres.writeFile({ fileName: `GTM_Deck_${prodName.replace(/\s+/g,'_')}.pptx` });
-                
-                const el = document.getElementById('deckStatus'); const l = el.querySelector('.loader');
-                if(l) l.style.display = 'none';
-                el.classList.remove('hidden'); el.style.color = '#16a34a';
-                document.getElementById('deckStatusText').innerHTML = `✅ PPTX Downloaded!`;
-                document.getElementById('printPdfBtn').classList.remove('hidden');
+Return ONLY valid JSON:
+{
+  "execOnePager": {
+    "headline": "One powerful sentence",
+    "opportunity": "2 sentences — market size and urgency",
+    "solution": "2 sentences — what we're building",
+    "businessCase": "3 bullet points with metrics/numbers",
+    "investment": "investment summary — team, timeline, cost estimate",
+    "ask": "What you need from exec — budget, headcount, approval"
+  },
+  "engSpec": {
+    "technicalSummary": "2 paragraphs — architecture overview and approach",
+    "apiContracts": ["API endpoint 1 description", "API endpoint 2 description"],
+    "dataModel": ["data entity 1 and key fields", "data entity 2 and key fields"],
+    "performanceReqs": ["< 200ms p99 latency for X", "support Y concurrent users"],
+    "securityReqs": ["auth requirement", "data handling requirement"],
+    "testingStrategy": "paragraph on testing approach — unit, integration, E2E, perf"
+  },
+  "salesGTM": {
+    "elevatorPitch": "One sentence pitch for sales reps",
+    "targetSegments": ["ICP segment 1 with why", "ICP segment 2 with why"],
+    "valueProp": ["value prop 1", "value prop 2", "value prop 3"],
+    "objectionHandling": [{"objection":"common sales objection","rebuttal":"response"}],
+    "competitiveDifferentiation": "2 sentences vs main alternatives",
+    "pricingGuidance": "pricing strategy and positioning",
+    "launchTimeline": [{"milestone":"milestone name","date":"Q3 2025","owner":"PM/Sales/Marketing"}]
+  }
+}`;
 
-            } catch (e) {
-                const el = document.getElementById('deckStatus'); const l = el.querySelector('.loader');
-                if(l) l.style.display = 'none';
-                el.classList.remove('hidden'); el.style.color = '#dc2626';
-                document.getElementById('deckStatusText').innerHTML = `❌ Error: ${e.message}`;
-            } finally {
-                btn.disabled = false; btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Generate Pitch Deck (PPTX & PDF)`;
-            }
-        }
-    </script>
+    const pkg = await apiCall(prompt, setS);
+    cachedSignoff = pkg;
+
+    const execD = pkg.execOnePager || {};
+    const engD = pkg.engSpec || {};
+    const salesD = pkg.salesGTM || {};
+    const prodName = d.prodName;
+
+    document.getElementById('execTitle').textContent = prodName + ' — Executive Summary';
+    document.getElementById('execContent').innerHTML = `
+      <div style="font-family:'Instrument Serif',serif;font-size:22px;color:var(--text);margin-bottom:16px;line-height:1.3;">${safeStr(execD.headline)}</div>
+      <div class="grid grid-cols-2 gap-6 mb-6">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">The Opportunity</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;">${safeStr(execD.opportunity)}</div>
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">The Solution</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;">${safeStr(execD.solution)}</div>
+        </div>
+      </div>
+      <div style="background:rgba(124,106,247,0.07);border:1px solid rgba(124,106,247,0.2);border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">Business Case</div>
+        ${(execD.businessCase||[]).map(b => `<div style="display:flex;gap:8px;margin-bottom:8px;font-size:13px;color:var(--text2);"><span style="color:var(--accent);flex-shrink:0;">▸</span>${safeStr(b)}</div>`).join('')}
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Investment Required</div>
+          <div style="font-size:12px;color:var(--text2);">${safeStr(execD.investment)}</div>
+        </div>
+        <div style="background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.2);border-radius:6px;padding:12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);margin-bottom:6px;text-transform:uppercase;">The Ask</div>
+          <div style="font-size:12px;color:var(--text2);">${safeStr(execD.ask)}</div>
+        </div>
+      </div>`;
+
+    document.getElementById('engTitle').textContent = prodName + ' — Engineering Specification';
+    document.getElementById('engContent').innerHTML = `
+      <div style="margin-bottom:20px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Technical Summary</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7;">${safeStr(engD.technicalSummary)}</div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">API Contracts</div>
+          ${(engD.apiContracts||[]).map(a => `<div style="font-size:11px;color:var(--text2);padding:6px 10px;background:var(--surface3);border-radius:4px;margin-bottom:4px;font-family:'DM Mono',monospace;">${safeStr(a)}</div>`).join('')}
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Data Model</div>
+          ${(engD.dataModel||[]).map(a => `<div style="font-size:11px;color:var(--text2);padding:6px 10px;background:var(--surface3);border-radius:4px;margin-bottom:4px;">${safeStr(a)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        ${[['Performance','performanceReqs','var(--amber)'],['Security','securityReqs','var(--red)']].map(([label,key,color]) => `
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:${color};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">${label}</div>
+            ${(engD[key]||[]).map(r => `<div style="font-size:11px;color:var(--text2);margin-bottom:5px;display:flex;gap:6px;"><span style="color:${color};flex-shrink:0;">·</span>${safeStr(r)}</div>`).join('')}
+          </div>`).join('')}
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Testing Strategy</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;">${safeStr(engD.testingStrategy)}</div>
+        </div>
+      </div>`;
+
+    document.getElementById('salesTitle').textContent = prodName + ' — Sales GTM Brief';
+    document.getElementById('salesContent').innerHTML = `
+      <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Elevator Pitch</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--text);line-height:1.4;">"${safeStr(salesD.elevatorPitch)}"</div>
+      </div>
+      <div class="grid grid-cols-2 gap-6 mb-6">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">ICP Segments</div>
+          ${(salesD.targetSegments||[]).map(s => `<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--surface3);border-radius:4px;margin-bottom:6px;">${safeStr(s)}</div>`).join('')}
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Value Propositions</div>
+          ${(salesD.valueProp||[]).map(v => `<div style="font-size:12px;color:var(--text2);display:flex;gap:8px;margin-bottom:8px;"><span style="color:var(--green);flex-shrink:0;">✓</span>${safeStr(v)}</div>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Objection Handling</div>
+        ${(salesD.objectionHandling||[]).map(o => `<div style="border-left:2px solid var(--border2);padding:8px 12px;margin-bottom:8px;"><div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:3px;">Q: ${safeStr(o.objection)}</div><div style="font-size:12px;color:var(--text2);">A: ${safeStr(o.rebuttal)}</div></div>`).join('')}
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Competitive Differentiation</div>
+          <div style="font-size:12px;color:var(--text2);">${safeStr(salesD.competitiveDifferentiation)}</div>
+        </div>
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Pricing Guidance</div>
+          <div style="font-size:12px;color:var(--text2);">${safeStr(salesD.pricingGuidance)}</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Launch Timeline</div>
+        <div style="display:flex;gap:0;">
+          ${(salesD.launchTimeline||[]).map((m, i, arr) => `
+            <div style="flex:1;position:relative;">
+              <div style="display:flex;align-items:center;margin-bottom:6px;">
+                <div style="width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--surface2);flex-shrink:0;"></div>
+                ${i < arr.length-1 ? '<div style="flex:1;height:1px;background:var(--border2);"></div>' : ''}
+              </div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);">${safeStr(m.milestone)}</div>
+              <div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--accent);">${safeStr(m.date)}</div>
+              <div style="font-size:10px;color:var(--muted);">${safeStr(m.owner)}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+
+    setS('Building PPTX deck...');
+    await buildPPTX(d, sz, pkg);
+
+    document.getElementById('signoffOutput').classList.remove('hidden');
+    document.getElementById('pptxBtn').classList.remove('hidden');
+    setStatus('signoffStatus', 'signoffStatusText', '', false);
+
+  } catch (e) {
+    setStatus('signoffStatus', 'signoffStatusText', '❌ ' + e.message, true);
+  } finally { btn.disabled = false; }
+}
+
+async function buildPPTX(prd, sz, pkg) {
+  const pres = new PptxGenJS(); pres.layout = 'LAYOUT_16x9'; pres.author = 'Product Manager Co-Pilot';
+  const P = { dark:'0A0A0F', ink:'14141C', surface:'22222C', border:'2A2A38', accent:'7C6AF7', teal:'22D3EE', green:'34D399', amber:'FBBF24', white:'FFFFFF', muted:'6B6B82', text:'E8E8F0', text2:'B8B8CC' };
+  const TODAY = new Date().toLocaleDateString('en-GB', { year:'numeric', month:'long', day:'numeric' });
+  const prodName = prd.prodName || 'Feature';
+  const hdr = (s, title, sub, color) => {
+    s.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:1.15, fill:{color:P.ink} });
+    s.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:0.06, h:1.15, fill:{color:color||P.accent} });
+    s.addText(title, { x:0.4, y:0.1, w:9.2, h:0.55, fontSize:24, bold:true, color:P.text, fontFace:'Calibri', margin:0 });
+    if (sub) s.addText(sub, { x:0.4, y:0.7, w:9.2, h:0.32, fontSize:11, color:P.muted, fontFace:'Calibri', margin:0 });
+  };
+  const ftr = (s, n, tot) => {
+    s.addShape(pres.shapes.RECTANGLE, { x:0, y:5.3, w:10, h:0.32, fill:{color:P.ink} });
+    s.addText(prodName + ' · GTM Alignment Package', { x:0.3, y:5.34, w:7, h:0.22, fontSize:8, color:P.muted, fontFace:'Calibri', margin:0 });
+    s.addText(n + ' / ' + tot, { x:9.0, y:5.34, w:0.7, h:0.22, fontSize:8, color:P.muted, fontFace:'Calibri', align:'right', margin:0 });
+  };
+
+  const execD = pkg.execOnePager || {};
+  const salesD = pkg.salesGTM || {};
+  let pg = 0; const TOTAL = 6;
+
+  const s1 = pres.addSlide(); s1.background = {color:P.dark};
+  s1.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:0.5, h:5.625, fill:{color:P.accent} });
+  s1.addText(prodName, { x:0.85, y:1.2, w:8.8, h:1.2, fontSize:48, bold:true, color:P.text, fontFace:'Calibri', margin:0 });
+  s1.addText(execD.headline || 'Product Strategy Document', { x:0.85, y:2.5, w:8.5, h:0.6, fontSize:18, color:P.text2, fontFace:'Calibri', italic:true, margin:0 });
+  s1.addShape(pres.shapes.RECTANGLE, { x:0.85, y:3.3, w:9, h:0.02, fill:{color:P.border} });
+  s1.addText('GTM ALIGNMENT PACKAGE · CONFIDENTIAL', { x:0.85, y:3.5, w:9, h:0.3, fontSize:10, color:P.muted, fontFace:'Calibri', charSpacing:3, margin:0 });
+  s1.addText(TODAY, { x:0.85, y:4.8, w:4, h:0.25, fontSize:10, color:P.muted, fontFace:'Calibri', margin:0 });
+
+  pg++; const s2 = pres.addSlide(); s2.background = {color:P.dark};
+  hdr(s2, 'Executive Summary', execD.headline, P.accent); ftr(s2, ++pg, TOTAL);
+  s2.addShape(pres.shapes.RECTANGLE, { x:0.3, y:1.25, w:9.4, h:0.85, fill:{color:P.surface} });
+  s2.addText(execD.opportunity || '', { x:0.5, y:1.32, w:9.0, h:0.7, fontSize:13, color:P.text2, fontFace:'Calibri', margin:0 });
+  (execD.businessCase || []).slice(0,3).forEach((b, i) => {
+    s2.addShape(pres.shapes.RECTANGLE, { x:0.3, y:2.3+i*0.75, w:9.4, h:0.62, fill:{color:'rgba(124,106,247,0.08)'}, line:{color:P.border,pt:0.5} });
+    s2.addShape(pres.shapes.RECTANGLE, { x:0.3, y:2.3+i*0.75, w:0.04, h:0.62, fill:{color:P.accent} });
+    s2.addText(b, { x:0.5, y:2.35+i*0.75, w:9.0, h:0.5, fontSize:12, color:P.text2, fontFace:'Calibri', margin:0 });
+  });
+
+  pg++; const s3 = pres.addSlide(); s3.background = {color:P.dark};
+  hdr(s3, 'Feature Priorities (RICE)', 'Ranked by reach × impact × confidence ÷ effort', P.accent); ftr(s3, ++pg, TOTAL);
+  const riceRows = (sz.riceScores || []).slice(0, 5);
+  riceRows.forEach((r, i) => {
+    const ry = 1.3 + i * 0.7;
+    s3.addShape(pres.shapes.RECTANGLE, { x:0.3, y:ry, w:9.4, h:0.58, fill:{color:i%2===0?P.surface:P.ink}, line:{color:P.border,pt:0.5} });
+    s3.addText(r.feature, { x:0.5, y:ry+0.1, w:4.5, h:0.38, fontSize:11, color:P.text2, fontFace:'Calibri', margin:0 });
+    const score = r.riceScore || 0;
+    s3.addShape(pres.shapes.RECTANGLE, { x:5.1, y:ry+0.12, w:Math.min((score/1500)*3.5, 3.5), h:0.32, fill:{color:P.accent} });
+    s3.addText(score.toLocaleString(), { x:8.75, y:ry+0.1, w:0.9, h:0.38, fontSize:12, bold:true, color:P.text, fontFace:'Calibri', align:'right', margin:0 });
+  });
+
+  pg++; const s4 = pres.addSlide(); s4.background = {color:P.dark};
+  hdr(s4, 'Risk Register', 'Top identified risks and mitigations', P.amber); ftr(s4, ++pg, TOTAL);
+  (sz.risks||[]).slice(0,4).forEach((r, i) => {
+    const ry = 1.3 + i * 0.88;
+    const lColor = r.likelihood === 'High' ? 'F87171' : r.likelihood === 'Medium' ? 'FBBF24' : '34D399';
+    s4.addShape(pres.shapes.RECTANGLE, { x:0.3, y:ry, w:9.4, h:0.72, fill:{color:P.surface}, line:{color:P.border,pt:0.5} });
+    s4.addShape(pres.shapes.RECTANGLE, { x:0.3, y:ry, w:0.05, h:0.72, fill:{color:lColor} });
+    s4.addText(r.risk, { x:0.5, y:ry+0.04, w:5.8, h:0.28, fontSize:11, bold:true, color:P.text2, fontFace:'Calibri', margin:0 });
+    s4.addText(r.mitigation, { x:0.5, y:ry+0.38, w:5.8, h:0.28, fontSize:10, color:P.muted, fontFace:'Calibri', margin:0 });
+    s4.addShape(pres.shapes.RECTANGLE, { x:6.5, y:ry+0.15, w:1.3, h:0.38, fill:{color:lColor+'22'}, line:{color:lColor,pt:0.5} });
+    s4.addText(r.likelihood, { x:6.5, y:ry+0.18, w:1.3, h:0.3, fontSize:10, bold:true, color:lColor, fontFace:'Calibri', align:'center', margin:0 });
+    s4.addText(r.owner, { x:8.0, y:ry+0.15, w:1.6, h:0.38, fontSize:10, color:P.muted, fontFace:'Calibri', align:'center', margin:0 });
+  });
+
+  pg++; const s5 = pres.addSlide(); s5.background = {color:P.dark};
+  hdr(s5, 'Sales GTM Brief', salesD.elevatorPitch || '', P.green); ftr(s5, ++pg, TOTAL);
+  s5.addShape(pres.shapes.RECTANGLE, { x:0.3, y:1.25, w:9.4, h:0.62, fill:{color:'34D39914'}, line:{color:'34D39944',pt:0.5} });
+  s5.addText('"' + (salesD.elevatorPitch || '') + '"', { x:0.5, y:1.3, w:9.0, h:0.5, fontSize:14, bold:true, color:P.text, italic:true, fontFace:'Calibri', margin:0 });
+  (salesD.valueProp||[]).slice(0,3).forEach((v, i) => {
+    s5.addShape(pres.shapes.RECTANGLE, { x:0.3+i*3.1, y:2.1, w:2.85, h:2.5, fill:{color:P.surface}, line:{color:P.border,pt:0.5} });
+    s5.addShape(pres.shapes.RECTANGLE, { x:0.3+i*3.1, y:2.1, w:2.85, h:0.06, fill:{color:P.green} });
+    s5.addText(v, { x:0.5+i*3.1, y:2.28, w:2.5, h:2.1, fontSize:12, color:P.text2, fontFace:'Calibri', valign:'top', margin:0 });
+  });
+
+  pg++; const s6 = pres.addSlide(); s6.background = {color:P.dark};
+  hdr(s6, 'Launch Timeline & Next Steps', sz.effortBreakdown?.totalEstimate || '', P.teal); ftr(s6, ++pg, TOTAL);
+  const milestones = salesD.launchTimeline || [];
+  milestones.slice(0,4).forEach((m, i) => {
+    const mx = 0.8 + i * 2.3;
+    s6.addShape(pres.shapes.RECTANGLE, { x:mx, y:1.5, w:1.8, h:2.5, fill:{color:P.surface}, line:{color:P.border,pt:0.5} });
+    s6.addShape(pres.shapes.RECTANGLE, { x:mx, y:1.5, w:1.8, h:0.5, fill:{color:P.ink} });
+    s6.addText(m.date, { x:mx, y:1.55, w:1.8, h:0.35, fontSize:13, bold:true, color:P.accent, fontFace:'Calibri', align:'center', margin:0 });
+    s6.addText(m.milestone, { x:mx+0.1, y:2.15, w:1.6, h:0.8, fontSize:11, color:P.text2, fontFace:'Calibri', align:'center', valign:'top', margin:0 });
+    s6.addText(m.owner, { x:mx+0.1, y:3.2, w:1.6, h:0.6, fontSize:10, color:P.muted, fontFace:'Calibri', align:'center', margin:0 });
+    if (i < milestones.slice(0,4).length - 1) {
+      s6.addShape(pres.shapes.RECTANGLE, { x:mx+1.8, y:2.72, w:0.5, h:0.06, fill:{color:P.border} });
+    }
+  });
+
+  await pres.writeFile({ fileName: `PM_CoP_${prodName.replace(/\s+/g,'_')}_GTM_Package.pptx` });
+}
+
+async function downloadAllPPTX() {
+  if (cachedPRD && cachedSizing && cachedSignoff) {
+    await buildPPTX(cachedPRD, cachedSizing, cachedSignoff);
+  }
+}
+
+function switchView(v) {
+  ['exec','eng','sales'].forEach(id => {
+    document.getElementById('view-' + id).classList.toggle('hidden', id !== v);
+    document.getElementById('vtab-' + id).classList.toggle('active', id === v);
+  });
+}
+
+function toggleApproval(el) {
+  const isApproved = el.classList.toggle('approved');
+  const badge = el.querySelector('.approval-status');
+  badge.className = 'approval-status status-pill ' + (isApproved ? 'status-done' : 'status-pending');
+  badge.textContent = isApproved ? '✓ Approved' : 'Pending';
+}
+</script>
 </body>
 </html>
